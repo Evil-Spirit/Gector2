@@ -27,3 +27,8 @@ gk_add_test(test_entityid   test_entityid.cpp)
 # Iteration 1.5
 gk_add_test(test_result     test_result.cpp)
 gk_add_test(test_log        test_log.cpp)
+# Chapter 3: Parametric Surfaces
+gk_add_test(test_surface_analytic  test_surface_analytic.cpp)
+gk_add_test(test_surface_bspline   test_surface_bspline.cpp)
+gk_add_test(test_surface_nurbs     test_surface_nurbs.cpp)
+gk_add_test(test_surface_utils     test_surface_utils.cpp)

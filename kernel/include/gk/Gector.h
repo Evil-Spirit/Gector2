@@ -23,3 +23,6 @@
 #include "gk/Error.h"
 #include "gk/Result.h"
 #include "gk/Log.h"
+
+// ── Chapter 3: Parametric Surfaces ───────────────────────────────────────────
+#include "gk/surface/Surfaces.h"
