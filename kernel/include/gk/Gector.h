@@ -1,6 +1,7 @@
 #pragma once
-// GectorKernel — top-level convenience header for math types.
+// GectorKernel — top-level convenience header.
 
+// ── Iteration 1.2: Core math types ───────────────────────────────────────────
 #include "gk/math/Vec2.h"
 #include "gk/math/Vec3.h"
 #include "gk/math/Vec4.h"
@@ -9,3 +10,16 @@
 #include "gk/math/Mat4x4.h"
 #include "gk/math/Quaternion.h"
 #include "gk/math/Interval.h"
+
+// ── Iteration 1.3: Tolerance & Precision Model ───────────────────────────────
+#include "gk/Tolerances.h"
+
+// ── Iteration 1.4: Memory & Handle Model ─────────────────────────────────────
+#include "gk/Handle.h"
+#include "gk/Arena.h"
+#include "gk/EntityId.h"
+
+// ── Iteration 1.5: Error Handling & Diagnostics ──────────────────────────────
+#include "gk/Error.h"
+#include "gk/Result.h"
+#include "gk/Log.h"
