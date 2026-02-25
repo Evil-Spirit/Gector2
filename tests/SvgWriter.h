@@ -2,10 +2,17 @@
 // Simple SVG writer used only by tests to produce visual debug output.
 
 #include "gk/math/Vec2.h"
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <string>
 #include <vector>
+
+// Returns "svg_test_output/<filename>" and ensures the directory exists.
+inline std::string svgOutputPath(const std::string& filename) {
+    std::filesystem::create_directories("svg_test_output");
+    return "svg_test_output/" + filename;
+}
 
 class SvgWriter {
 public:

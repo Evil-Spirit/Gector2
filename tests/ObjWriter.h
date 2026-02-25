@@ -4,9 +4,16 @@
 #include "gk/math/Vec3.h"
 #include "gk/surface/SurfaceUtils.h"
 #include <array>
+#include <filesystem>
 #include <fstream>
 #include <string>
 #include <vector>
+
+// Returns "obj_test_output/<filename>" and ensures the directory exists.
+inline std::string objOutputPath(const std::string& filename) {
+    std::filesystem::create_directories("obj_test_output");
+    return "obj_test_output/" + filename;
+}
 
 class ObjWriter {
 public:

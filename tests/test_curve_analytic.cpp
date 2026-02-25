@@ -198,6 +198,6 @@ GK_TEST(CurveAnalytic, SVG_Output) {
         svg.addPoint(Vec2(5,5), "#ff0000", 2.0);
     }
 
-    svg.write("curve_analytic_debug.svg");
+    svg.write(svgOutputPath("curve_analytic_debug.svg"));
     SUCCEED();
 }

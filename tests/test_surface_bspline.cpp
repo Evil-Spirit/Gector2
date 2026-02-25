@@ -1,5 +1,7 @@
 #include "GkTest.h"
+#include "ObjWriter.h"
 #include "gk/surface/BSplineSurface.h"
+#include "gk/surface/SurfaceUtils.h"
 #include <cmath>
 #include <vector>
 
@@ -171,4 +173,47 @@ GK_TEST(BSplineSurface, DegreeElevateV_PreservesGeometry)
     for (double u : {0.0, 0.3, 0.7, 1.0})
         for (double v : {0.0, 0.3, 0.7, 1.0})
             expectVec3Near(s.evaluate(u,v).p, s2.evaluate(u,v).p, 1e-8);
+}
+
+// ── OBJ visual export ─────────────────────────────────────────────────────────
+
+GK_TEST(BSplineSurface, OBJ_BilinearPatch)
+{
+    auto s = makeBilinear();
+    auto mesh = gk::tessellate(s, 8, 8);
+    ObjWriter obj;
+    obj.addSurfaceMesh(mesh);
+    obj.write(objOutputPath("bspline_bilinear_patch_debug.obj"));
+    SUCCEED();
+}
+
+GK_TEST(BSplineSurface, OBJ_QuadLinearPatch)
+{
+    auto s = makeQuadLinear();
+    auto mesh = gk::tessellate(s, 16, 8);
+    ObjWriter obj;
+    obj.addSurfaceMesh(mesh);
+    obj.write(objOutputPath("bspline_quad_linear_patch_debug.obj"));
+    SUCCEED();
+}
+
+GK_TEST(BSplineSurface, OBJ_BicubicWavePatch)
+{
+    // 4×4 bicubic patch with a wave-like Z profile
+    BSplineSurface::CtrlGrid ctrl(4, std::vector<Vec3>(4));
+    for (int i = 0; i < 4; ++i)
+        for (int j = 0; j < 4; ++j) {
+            double u = double(i) / 3.0;
+            double v = double(j) / 3.0;
+            ctrl[i][j] = Vec3(u * 3.0, v * 3.0,
+                              std::sin(u * 3.14159) * std::cos(v * 3.14159));
+        }
+    auto kU = BSplineSurface::uniformKnots(4, 3);
+    auto kV = BSplineSurface::uniformKnots(4, 3);
+    BSplineSurface surf(3, 3, kU, kV, ctrl);
+    auto mesh = gk::tessellate(surf, 24, 24);
+    ObjWriter obj;
+    obj.addSurfaceMesh(mesh);
+    obj.write(objOutputPath("bspline_bicubic_wave_debug.obj"));
+    SUCCEED();
 }

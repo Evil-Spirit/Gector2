@@ -10,7 +10,7 @@ GK_TEST(SurfaceObjWriter, SphereObj) {
     auto mesh = tessellate(sphere, 20, 20);
     ObjWriter obj;
     obj.addSurfaceMesh(mesh);
-    obj.write("sphere_debug.obj");
+    obj.write(objOutputPath("sphere_debug.obj"));
     SUCCEED();
 }
 
@@ -19,7 +19,7 @@ GK_TEST(SurfaceObjWriter, CylinderObj) {
     auto mesh = tessellate(cyl, 24, 8);
     ObjWriter obj;
     obj.addSurfaceMesh(mesh);
-    obj.write("cylinder_debug.obj");
+    obj.write(objOutputPath("cylinder_debug.obj"));
     SUCCEED();
 }
 
@@ -28,7 +28,7 @@ GK_TEST(SurfaceObjWriter, TorusObj) {
     auto mesh = tessellate(torus, 32, 16);
     ObjWriter obj;
     obj.addSurfaceMesh(mesh);
-    obj.write("torus_debug.obj");
+    obj.write(objOutputPath("torus_debug.obj"));
     SUCCEED();
 }
 
@@ -46,7 +46,7 @@ GK_TEST(SurfaceObjWriter, BSplineSurfaceObj) {
     auto mesh = tessellate(surf, 16, 16);
     ObjWriter obj;
     obj.addSurfaceMesh(mesh);
-    obj.write("bspline_surface_debug.obj");
+    obj.write(objOutputPath("bspline_surface_debug.obj"));
     SUCCEED();
 }
 

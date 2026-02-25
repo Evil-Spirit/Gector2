@@ -1,4 +1,5 @@
 #include "GkTest.h"
+#include "ObjWriter.h"
 #include "gk/surface/Plane.h"
 #include "gk/surface/Sphere.h"
 #include "gk/surface/Cylinder.h"
@@ -119,4 +120,46 @@ GK_TEST(SurfaceUtils, ClosestPointAlreadyOnSurface)
     auto [u, v] = gk::closestPoint(p, gk::Vec3{2.0, -1.0, 0.0}, 2.0, -1.0);
     EXPECT_NEAR(u,  2.0, 1e-9);
     EXPECT_NEAR(v, -1.0, 1e-9);
+}
+
+// ── OBJ visual export for tessellation results ─────────────────────────────────
+
+GK_TEST(SurfaceUtils, OBJ_TessellatedSphere)
+{
+    gk::Sphere s{gk::Vec3::zero(), 3.0};
+    auto mesh = gk::tessellate(s, 24, 12);
+    ObjWriter obj;
+    obj.addSurfaceMesh(mesh);
+    obj.write(objOutputPath("surface_utils_sphere_debug.obj"));
+    SUCCEED();
+}
+
+GK_TEST(SurfaceUtils, OBJ_TessellatedCylinder)
+{
+    gk::Cylinder c{gk::Vec3::zero(), gk::Vec3::unitZ(), 1.0, 0.0, 3.0};
+    auto mesh = gk::tessellate(c, 24, 6);
+    ObjWriter obj;
+    obj.addSurfaceMesh(mesh);
+    obj.write(objOutputPath("surface_utils_cylinder_debug.obj"));
+    SUCCEED();
+}
+
+GK_TEST(SurfaceUtils, OBJ_TessellatedBSplineSaddlePatch)
+{
+    // Saddle (hyperbolic paraboloid) patch: z = u² − v²
+    BSplineSurface::CtrlGrid ctrl(4, std::vector<gk::Vec3>(4));
+    for (int i = 0; i < 4; ++i)
+        for (int j = 0; j < 4; ++j) {
+            double u = double(i) / 3.0 * 2.0 - 1.0;   // [−1, 1]
+            double v = double(j) / 3.0 * 2.0 - 1.0;   // [−1, 1]
+            ctrl[i][j] = gk::Vec3(u, v, u * u - v * v);
+        }
+    auto kU = BSplineSurface::uniformKnots(4, 3);
+    auto kV = BSplineSurface::uniformKnots(4, 3);
+    gk::BSplineSurface surf(3, 3, kU, kV, ctrl);
+    auto mesh = gk::tessellate(surf, 20, 20);
+    ObjWriter obj;
+    obj.addSurfaceMesh(mesh);
+    obj.write(objOutputPath("surface_utils_saddle_debug.obj"));
+    SUCCEED();
 }

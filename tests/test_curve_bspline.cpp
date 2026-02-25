@@ -201,6 +201,6 @@ GK_TEST(BSplineCurve, SVG_Output) {
         svg.addPolyline(pts, "#008800");
     }
 
-    svg.write("curve_bspline_debug.svg");
+    svg.write(svgOutputPath("curve_bspline_debug.svg"));
     SUCCEED();
 }

@@ -1,6 +1,8 @@
 #include "GkTest.h"
+#include "ObjWriter.h"
 #include "gk/surface/NURBSSurface.h"
 #include "gk/surface/BSplineSurface.h"
+#include "gk/surface/SurfaceUtils.h"
 #include <cmath>
 #include <vector>
 
@@ -119,4 +121,30 @@ GK_TEST(NURBSSurface, Domain)
     auto dom = n.domain();
     EXPECT_NEAR(dom.u.lo, 0.0, 1e-12); EXPECT_NEAR(dom.u.hi, 1.0, 1e-12);
     EXPECT_NEAR(dom.v.lo, 0.0, 1e-12); EXPECT_NEAR(dom.v.hi, 1.0, 1e-12);
+}
+
+// ── OBJ visual export ─────────────────────────────────────────────────────────
+
+GK_TEST(NURBSSurface, OBJ_UnitWeightBilinear)
+{
+    auto n = makeUnitWeightNURBS();
+    auto mesh = gk::tessellate(n, 10, 10);
+    ObjWriter obj;
+    obj.addSurfaceMesh(mesh);
+    obj.write(objOutputPath("nurbs_bilinear_debug.obj"));
+    SUCCEED();
+}
+
+GK_TEST(NURBSSurface, OBJ_NonUniformWeightedPatch)
+{
+    NURBSSurface::CtrlGrid pts(2, std::vector<Vec3>(2));
+    pts[0][0] = Vec3{0,0,0}; pts[1][0] = Vec3{1,0,0};
+    pts[0][1] = Vec3{0,1,0}; pts[1][1] = Vec3{1,1,1};
+    NURBSSurface::WtGrid wts{{1.0, 1.0}, {3.0, 0.5}};
+    NURBSSurface n{1,1,{0.0,0.0,1.0,1.0},{0.0,0.0,1.0,1.0},pts,wts};
+    auto mesh = gk::tessellate(n, 12, 12);
+    ObjWriter obj;
+    obj.addSurfaceMesh(mesh);
+    obj.write(objOutputPath("nurbs_weighted_patch_debug.obj"));
+    SUCCEED();
 }

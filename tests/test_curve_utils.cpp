@@ -1,4 +1,5 @@
 #include "GkTest.h"
+#include "SvgWriter.h"
 #include "gk/curve/CurveUtils.h"
 #include "gk/curve/Line.h"
 #include "gk/curve/Circle.h"
@@ -94,5 +95,69 @@ GK_TEST(CurveUtils, Intersect2DLineAndCircle) {
     auto res = CurveUtils::intersect2D(l1, l2);
     // Parallel lines, should find no intersection
     GK_ASSERT_TRUE(res.empty());
+    SUCCEED();
+}
+
+// Visual test: closest-point projection and 2-D intersections.
+GK_TEST(CurveUtils, SVG_ClosestPointAndIntersection) {
+    SvgWriter svg(800, 600);
+    svg.setView(-1.5, -1.5, 9.5, 8.5);
+
+    // ── Closest point: query point projected onto a B-spline curve ──────────
+    {
+        std::vector<Vec2> ctrl = {Vec2(0,0), Vec2(1,4), Vec2(3,4), Vec2(5,1), Vec2(7,3)};
+        auto knots = BSplineCurve2::uniformKnots(5, 3);
+        BSplineCurve2 c(3, knots, ctrl);
+
+        // Draw the curve
+        std::vector<Vec2> curvePts;
+        auto dom = c.domain();
+        for (int i = 0; i <= 120; ++i) {
+            double t = dom.lo + dom.width() * (double(i) / 120.0);
+            curvePts.push_back(c.evaluate(t).p);
+        }
+        svg.addPolyline(curvePts, "#0000cc");
+        svg.addPolyline(ctrl, "#aaaaff", 0.7);
+        for (auto& p : ctrl) svg.addPoint(p, "#7777ff", 3.0);
+
+        // Query points and their projections
+        for (Vec2 query : {Vec2(1.5, 1.5), Vec2(4.0, 5.5), Vec2(6.5, 0.5)}) {
+            double t = CurveUtils::closestPoint(c, query, 32);
+            Vec2 proj = c.evaluate(t).p;
+
+            // Draw connector: query → projection
+            svg.addPolyline({query, proj}, "#ff6600", 0.8);
+            svg.addPoint(query, "#ff6600", 4.0);
+            svg.addPoint(proj,  "#cc3300", 3.5);
+        }
+        svg.addLabel(Vec2(0.0, -0.8), "B-spline + closest-point projections");
+    }
+
+    // ── Intersection: two crossing lines ────────────────────────────────────
+    {
+        Line2 l1 = Line2::fromSegment(Vec2(0, 5), Vec2(4, 8));
+        Line2 l2 = Line2::fromSegment(Vec2(0, 8), Vec2(4, 5));
+
+        auto drawLine2 = [&](const Line2& l, const std::string& col) {
+            std::vector<Vec2> pts;
+            auto dom = l.domain();
+            for (int i = 0; i <= 30; ++i) {
+                double t = dom.lo + dom.width() * (double(i) / 30.0);
+                pts.push_back(l.evaluate(t).p);
+            }
+            svg.addPolyline(pts, col);
+        };
+        drawLine2(l1, "#008800");
+        drawLine2(l2, "#880000");
+
+        auto res = CurveUtils::intersect2D(l1, l2);
+        if (!res.empty()) {
+            Vec2 ip = l1.evaluate(res[0].first).p;
+            svg.addPoint(ip, "#ff00ff", 5.0);
+        }
+        svg.addLabel(Vec2(0.0, 4.3), "Line-line intersection (magenta)");
+    }
+
+    svg.write(svgOutputPath("curve_utils_debug.svg"));
     SUCCEED();
 }
