@@ -1,0 +1,5 @@
+add_test([=[Smoke.AlwaysPasses]=]  /home/runner/work/Gector2/Gector2/build_verify/tests/test_smoke [==[--gtest_filter=Smoke.AlwaysPasses]==] --gtest_also_run_disabled_tests)
+set_tests_properties([=[Smoke.AlwaysPasses]=]  PROPERTIES WORKING_DIRECTORY /home/runner/work/Gector2/Gector2/build_verify/tests SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==])
+add_test([=[Smoke.AssertNear]=]  /home/runner/work/Gector2/Gector2/build_verify/tests/test_smoke [==[--gtest_filter=Smoke.AssertNear]==] --gtest_also_run_disabled_tests)
+set_tests_properties([=[Smoke.AssertNear]=]  PROPERTIES WORKING_DIRECTORY /home/runner/work/Gector2/Gector2/build_verify/tests SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==])
+set(  test_smoke_TESTS Smoke.AlwaysPasses Smoke.AssertNear)

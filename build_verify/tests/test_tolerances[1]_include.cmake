@@ -1,0 +1,5 @@
+if(EXISTS "/home/runner/work/Gector2/Gector2/build_verify/tests/test_tolerances[1]_tests.cmake")
+  include("/home/runner/work/Gector2/Gector2/build_verify/tests/test_tolerances[1]_tests.cmake")
+else()
+  add_test(test_tolerances_NOT_BUILT test_tolerances_NOT_BUILT)
+endif()
