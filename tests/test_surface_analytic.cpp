@@ -1,5 +1,5 @@
 #include "GkTest.h"
-#include "ObjWriter.h"
+#include "StepWriter.h"
 #include "gk/surface/Plane.h"
 #include "gk/surface/Sphere.h"
 #include "gk/surface/Cylinder.h"
@@ -364,56 +364,54 @@ GK_TEST(Torus, IsClosedInBothDirections)
     GK_ASSERT_TRUE(cv);
 }
 
-// Visual OBJ export — one file per analytic surface so they can be viewed
-// independently in any 3-D viewer (e.g. Blender, MeshLab).
-GK_TEST(AnalyticSurfaces, OBJ_PlaneExport)
+// Visual STEP export — one file per analytic surface so they can be viewed
+// independently in any 3-D viewer (e.g. FreeCAD, MeshLab).
+GK_TEST(AnalyticSurfaces, STEP_PlaneExport)
 {
     gk::Plane p = gk::Plane::xyPlane();
-    // Override domain for export: finite 4×4 patch centred at origin
-    // We tessellate using a Plane with its default xyPlane domain
     auto mesh = gk::tessellate(p, 8, 8);
-    ObjWriter obj;
-    obj.addSurfaceMesh(mesh);
-    obj.write(objOutputPath("plane_debug.obj"));
+    StepWriter step;
+    step.addSurfaceMesh(mesh);
+    step.write(stepOutputPath("plane_debug.stp"));
     SUCCEED();
 }
 
-GK_TEST(AnalyticSurfaces, OBJ_SphereExport)
+GK_TEST(AnalyticSurfaces, STEP_SphereExport)
 {
     gk::Sphere s{gk::Vec3::zero(), 2.0};
     auto mesh = gk::tessellate(s, 32, 16);
-    ObjWriter obj;
-    obj.addSurfaceMesh(mesh);
-    obj.write(objOutputPath("sphere_analytic_debug.obj"));
+    StepWriter step;
+    step.addSurfaceMesh(mesh);
+    step.write(stepOutputPath("sphere_analytic_debug.stp"));
     SUCCEED();
 }
 
-GK_TEST(AnalyticSurfaces, OBJ_CylinderExport)
+GK_TEST(AnalyticSurfaces, STEP_CylinderExport)
 {
     gk::Cylinder c{gk::Vec3::zero(), gk::Vec3::unitZ(), 1.5, 0.0, 4.0};
     auto mesh = gk::tessellate(c, 32, 8);
-    ObjWriter obj;
-    obj.addSurfaceMesh(mesh);
-    obj.write(objOutputPath("cylinder_analytic_debug.obj"));
+    StepWriter step;
+    step.addSurfaceMesh(mesh);
+    step.write(stepOutputPath("cylinder_analytic_debug.stp"));
     SUCCEED();
 }
 
-GK_TEST(AnalyticSurfaces, OBJ_ConeExport)
+GK_TEST(AnalyticSurfaces, STEP_ConeExport)
 {
     gk::Cone c{gk::Vec3::zero(), gk::Vec3::unitZ(), kPi / 6.0, 0.1, 3.0};
     auto mesh = gk::tessellate(c, 32, 10);
-    ObjWriter obj;
-    obj.addSurfaceMesh(mesh);
-    obj.write(objOutputPath("cone_debug.obj"));
+    StepWriter step;
+    step.addSurfaceMesh(mesh);
+    step.write(stepOutputPath("cone_debug.stp"));
     SUCCEED();
 }
 
-GK_TEST(AnalyticSurfaces, OBJ_TorusExport)
+GK_TEST(AnalyticSurfaces, STEP_TorusExport)
 {
     gk::Torus t{gk::Vec3::zero(), gk::Vec3::unitZ(), 3.0, 1.0};
     auto mesh = gk::tessellate(t, 40, 20);
-    ObjWriter obj;
-    obj.addSurfaceMesh(mesh);
-    obj.write(objOutputPath("torus_analytic_debug.obj"));
+    StepWriter step;
+    step.addSurfaceMesh(mesh);
+    step.write(stepOutputPath("torus_analytic_debug.stp"));
     SUCCEED();
 }

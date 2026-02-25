@@ -1,5 +1,5 @@
 #include "GkTest.h"
-#include "ObjWriter.h"
+#include "StepWriter.h"
 #include "gk/surface/Plane.h"
 #include "gk/surface/Sphere.h"
 #include "gk/surface/Cylinder.h"
@@ -122,29 +122,29 @@ GK_TEST(SurfaceUtils, ClosestPointAlreadyOnSurface)
     EXPECT_NEAR(v, -1.0, 1e-9);
 }
 
-// ── OBJ visual export for tessellation results ─────────────────────────────────
+// ── STEP visual export for tessellation results ────────────────────────────
 
-GK_TEST(SurfaceUtils, OBJ_TessellatedSphere)
+GK_TEST(SurfaceUtils, STEP_TessellatedSphere)
 {
     gk::Sphere s{gk::Vec3::zero(), 3.0};
     auto mesh = gk::tessellate(s, 24, 12);
-    ObjWriter obj;
-    obj.addSurfaceMesh(mesh);
-    obj.write(objOutputPath("surface_utils_sphere_debug.obj"));
+    StepWriter step;
+    step.addSurfaceMesh(mesh);
+    step.write(stepOutputPath("surface_utils_sphere_debug.stp"));
     SUCCEED();
 }
 
-GK_TEST(SurfaceUtils, OBJ_TessellatedCylinder)
+GK_TEST(SurfaceUtils, STEP_TessellatedCylinder)
 {
     gk::Cylinder c{gk::Vec3::zero(), gk::Vec3::unitZ(), 1.0, 0.0, 3.0};
     auto mesh = gk::tessellate(c, 24, 6);
-    ObjWriter obj;
-    obj.addSurfaceMesh(mesh);
-    obj.write(objOutputPath("surface_utils_cylinder_debug.obj"));
+    StepWriter step;
+    step.addSurfaceMesh(mesh);
+    step.write(stepOutputPath("surface_utils_cylinder_debug.stp"));
     SUCCEED();
 }
 
-GK_TEST(SurfaceUtils, OBJ_TessellatedBSplineSaddlePatch)
+GK_TEST(SurfaceUtils, STEP_TessellatedBSplineSaddlePatch)
 {
     // Saddle (hyperbolic paraboloid) patch: z = u² − v²
     BSplineSurface::CtrlGrid ctrl(4, std::vector<gk::Vec3>(4));
@@ -158,8 +158,8 @@ GK_TEST(SurfaceUtils, OBJ_TessellatedBSplineSaddlePatch)
     auto kV = BSplineSurface::uniformKnots(4, 3);
     gk::BSplineSurface surf(3, 3, kU, kV, ctrl);
     auto mesh = gk::tessellate(surf, 20, 20);
-    ObjWriter obj;
-    obj.addSurfaceMesh(mesh);
-    obj.write(objOutputPath("surface_utils_saddle_debug.obj"));
+    StepWriter step;
+    step.addSurfaceMesh(mesh);
+    step.write(stepOutputPath("surface_utils_saddle_debug.stp"));
     SUCCEED();
 }

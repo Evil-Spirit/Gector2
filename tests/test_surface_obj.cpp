@@ -1,38 +1,38 @@
 #include "GkTest.h"
-#include "ObjWriter.h"
+#include "StepWriter.h"
 #include "gk/surface/Surfaces.h"
 #include <cmath>
 
 using namespace gk;
 
-GK_TEST(SurfaceObjWriter, SphereObj) {
+GK_TEST(SurfaceStepWriter, SphereStp) {
     Sphere sphere(Vec3::zero(), 1.0);
     auto mesh = tessellate(sphere, 20, 20);
-    ObjWriter obj;
-    obj.addSurfaceMesh(mesh);
-    obj.write(objOutputPath("sphere_debug.obj"));
+    StepWriter step;
+    step.addSurfaceMesh(mesh);
+    step.write(stepOutputPath("sphere_debug.stp"));
     SUCCEED();
 }
 
-GK_TEST(SurfaceObjWriter, CylinderObj) {
+GK_TEST(SurfaceStepWriter, CylinderStp) {
     Cylinder cyl(Vec3::zero(), Vec3::unitZ(), 1.0, 0.0, 2.0);
     auto mesh = tessellate(cyl, 24, 8);
-    ObjWriter obj;
-    obj.addSurfaceMesh(mesh);
-    obj.write(objOutputPath("cylinder_debug.obj"));
+    StepWriter step;
+    step.addSurfaceMesh(mesh);
+    step.write(stepOutputPath("cylinder_debug.stp"));
     SUCCEED();
 }
 
-GK_TEST(SurfaceObjWriter, TorusObj) {
+GK_TEST(SurfaceStepWriter, TorusStp) {
     Torus torus(Vec3::zero(), Vec3::unitZ(), 2.0, 0.5);
     auto mesh = tessellate(torus, 32, 16);
-    ObjWriter obj;
-    obj.addSurfaceMesh(mesh);
-    obj.write(objOutputPath("torus_debug.obj"));
+    StepWriter step;
+    step.addSurfaceMesh(mesh);
+    step.write(stepOutputPath("torus_debug.stp"));
     SUCCEED();
 }
 
-GK_TEST(SurfaceObjWriter, BSplineSurfaceObj) {
+GK_TEST(SurfaceStepWriter, BSplineSurfaceStp) {
     BSplineSurface::CtrlGrid ctrl(4, std::vector<Vec3>(4));
     for (int i = 0; i < 4; ++i)
         for (int j = 0; j < 4; ++j) {
@@ -44,13 +44,13 @@ GK_TEST(SurfaceObjWriter, BSplineSurfaceObj) {
     auto kV = BSplineSurface::uniformKnots(4, 3);
     BSplineSurface surf(3, 3, kU, kV, ctrl);
     auto mesh = tessellate(surf, 16, 16);
-    ObjWriter obj;
-    obj.addSurfaceMesh(mesh);
-    obj.write(objOutputPath("bspline_surface_debug.obj"));
+    StepWriter step;
+    step.addSurfaceMesh(mesh);
+    step.write(stepOutputPath("bspline_surface_debug.stp"));
     SUCCEED();
 }
 
-GK_TEST(SurfaceObjWriter, TessellationVerticesOnSphere) {
+GK_TEST(SurfaceStepWriter, TessellationVerticesOnSphere) {
     Sphere sphere(Vec3::zero(), 1.0);
     auto mesh = tessellate(sphere, 20, 20);
     for (auto& v : mesh.vertices) {

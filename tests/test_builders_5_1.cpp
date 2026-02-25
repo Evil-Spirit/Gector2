@@ -2,12 +2,19 @@
 
 #include "gk/builders/PrimitiveBuilders.h"
 #include "gk/brep/BRepQuery.h"
+#include "gk/brep/StepExport.h"
 #include "gk/surface/SurfaceUtils.h"
-#include "ObjWriter.h"
+#include <filesystem>
 #include <gtest/gtest.h>
 #include <cmath>
 
 using namespace gk;
+
+// Returns "step_test_output/<filename>" and ensures the directory exists.
+static std::string builderStepPath(const std::string& filename) {
+    std::filesystem::create_directories("step_test_output");
+    return "step_test_output/" + filename;
+}
 
 TEST(Builders5_1, BoxVolume) {
     auto body = makeBox(Vec3::zero(), Vec3{1,1,1});
@@ -47,59 +54,23 @@ TEST(Builders5_1, ConeVolume) {
     EXPECT_NEAR(mp.volume, expectedVol, 0.05);
 }
 
-TEST(Builders5_1, BoxObjExport) {
+TEST(Builders5_1, BoxStepExport) {
     auto body = makeBox(Vec3::zero(), Vec3{2,1,1.5});
-    ObjWriter obj;
-    for (auto& lump : body->lumps()) {
-        if (!lump || !lump->outerShell()) continue;
-        for (auto& face : lump->outerShell()->faces()) {
-            if (!face->hasSurface()) continue;
-            auto mesh = tessellate(*face->surface(), 8, 8);
-            obj.addSurfaceMesh(mesh);
-        }
-    }
-    EXPECT_TRUE(obj.write(objOutputPath("box_debug.obj")));
+    EXPECT_TRUE(StepExport::writeBodyToFile(*body, builderStepPath("box_debug.stp")));
 }
 
-TEST(Builders5_1, SphereObjExport) {
+TEST(Builders5_1, SphereStepExport) {
     auto body = makeSphere(Vec3::zero(), 1.0);
-    ObjWriter obj;
-    for (auto& lump : body->lumps()) {
-        if (!lump || !lump->outerShell()) continue;
-        for (auto& face : lump->outerShell()->faces()) {
-            if (!face->hasSurface()) continue;
-            auto mesh = tessellate(*face->surface(), 20, 20);
-            obj.addSurfaceMesh(mesh);
-        }
-    }
-    EXPECT_TRUE(obj.write(objOutputPath("sphere_builder_debug.obj")));
+    EXPECT_TRUE(StepExport::writeBodyToFile(*body, builderStepPath("sphere_builder_debug.stp")));
 }
 
-TEST(Builders5_1, CylinderObjExport) {
+TEST(Builders5_1, CylinderStepExport) {
     auto body = makeCylinder(Vec3::zero(), Vec3::unitZ(), 1.0, 2.0);
-    ObjWriter obj;
-    for (auto& lump : body->lumps()) {
-        if (!lump || !lump->outerShell()) continue;
-        for (auto& face : lump->outerShell()->faces()) {
-            if (!face->hasSurface()) continue;
-            auto mesh = tessellate(*face->surface(), 24, 8);
-            obj.addSurfaceMesh(mesh);
-        }
-    }
-    EXPECT_TRUE(obj.write(objOutputPath("cylinder_builder_debug.obj")));
+    EXPECT_TRUE(StepExport::writeBodyToFile(*body, builderStepPath("cylinder_builder_debug.stp")));
 }
 
-TEST(Builders5_1, ConeObjExport) {
+TEST(Builders5_1, ConeStepExport) {
     constexpr double kPi = 3.14159265358979323846;
     auto body = makeCone(Vec3::zero(), Vec3::unitZ(), kPi/6.0, 2.0);
-    ObjWriter obj;
-    for (auto& lump : body->lumps()) {
-        if (!lump || !lump->outerShell()) continue;
-        for (auto& face : lump->outerShell()->faces()) {
-            if (!face->hasSurface()) continue;
-            auto mesh = tessellate(*face->surface(), 24, 8);
-            obj.addSurfaceMesh(mesh);
-        }
-    }
-    EXPECT_TRUE(obj.write(objOutputPath("cone_builder_debug.obj")));
+    EXPECT_TRUE(StepExport::writeBodyToFile(*body, builderStepPath("cone_builder_debug.stp")));
 }

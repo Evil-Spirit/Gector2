@@ -2,8 +2,9 @@
 
 #include "gk/builders/MoreBuilders.h"
 #include "gk/brep/BRepQuery.h"
+#include "gk/brep/StepExport.h"
 #include "gk/surface/SurfaceUtils.h"
-#include "ObjWriter.h"
+#include "StepWriter.h"
 #include <gtest/gtest.h>
 #include <cmath>
 
@@ -35,52 +36,34 @@ TEST(Builders5_2, PyramidMeshVertexCount) {
     EXPECT_FALSE(mesh.triangles.empty());
 }
 
-TEST(Builders5_2, TorusObjExport) {
+TEST(Builders5_2, TorusStepExport) {
     auto body = makeTorus(Vec3::zero(), Vec3::unitZ(), 2.0, 0.5);
-    ObjWriter obj;
-    for (auto& lump : body->lumps()) {
-        if (!lump || !lump->outerShell()) continue;
-        for (auto& face : lump->outerShell()->faces()) {
-            if (!face->hasSurface()) continue;
-            auto mesh = tessellate(*face->surface(), 32, 16);
-            obj.addSurfaceMesh(mesh);
-        }
-    }
-    EXPECT_TRUE(obj.write(objOutputPath("torus_builder_debug.obj")));
+    EXPECT_TRUE(StepExport::writeBodyToFile(*body, stepOutputPath("torus_builder_debug.stp")));
 }
 
-TEST(Builders5_2, WedgeObjExport) {
+TEST(Builders5_2, WedgeStepExport) {
     auto mesh = makeWedgeMesh(Vec3::zero(), 2.0, 1.0, 1.5);
-    ObjWriter obj;
-    for (auto& v : mesh.vertices) obj.addVertex(v);
-    for (auto& n : mesh.normals)  obj.addNormal(n);
-    int vOff = 1, nOff = 1;
+    StepWriter step;
+    for (auto& v : mesh.vertices) step.addVertex(v);
     for (auto& t : mesh.triangles)
-        obj.addFaceWithNormals(t[0]+vOff, t[0]+nOff, t[1]+vOff, t[1]+nOff,
-                               t[2]+vOff, t[2]+nOff);
-    EXPECT_TRUE(obj.write(objOutputPath("wedge_debug.obj")));
+        step.addFace(t[0], t[1], t[2]);
+    EXPECT_TRUE(step.write(stepOutputPath("wedge_debug.stp")));
 }
 
-TEST(Builders5_2, PrismObjExport) {
+TEST(Builders5_2, PrismStepExport) {
     auto mesh = makePrismMesh(Vec3::zero(), Vec3::unitZ(), 1.0, 6, 2.0);
-    ObjWriter obj;
-    for (auto& v : mesh.vertices) obj.addVertex(v);
-    for (auto& n : mesh.normals)  obj.addNormal(n);
-    int vOff=1, nOff=1;
+    StepWriter step;
+    for (auto& v : mesh.vertices) step.addVertex(v);
     for (auto& t : mesh.triangles)
-        obj.addFaceWithNormals(t[0]+vOff, t[0]+nOff, t[1]+vOff, t[1]+nOff,
-                               t[2]+vOff, t[2]+nOff);
-    EXPECT_TRUE(obj.write(objOutputPath("prism_debug.obj")));
+        step.addFace(t[0], t[1], t[2]);
+    EXPECT_TRUE(step.write(stepOutputPath("prism_debug.stp")));
 }
 
-TEST(Builders5_2, PyramidObjExport) {
+TEST(Builders5_2, PyramidStepExport) {
     auto mesh = makePyramidMesh(Vec3{0,0,2}, Vec3::zero(), Vec3::unitZ(), 1.0, 4);
-    ObjWriter obj;
-    for (auto& v : mesh.vertices) obj.addVertex(v);
-    for (auto& n : mesh.normals)  obj.addNormal(n);
-    int vOff=1, nOff=1;
+    StepWriter step;
+    for (auto& v : mesh.vertices) step.addVertex(v);
     for (auto& t : mesh.triangles)
-        obj.addFaceWithNormals(t[0]+vOff, t[0]+nOff, t[1]+vOff, t[1]+nOff,
-                               t[2]+vOff, t[2]+nOff);
-    EXPECT_TRUE(obj.write(objOutputPath("pyramid_debug.obj")));
+        step.addFace(t[0], t[1], t[2]);
+    EXPECT_TRUE(step.write(stepOutputPath("pyramid_debug.stp")));
 }

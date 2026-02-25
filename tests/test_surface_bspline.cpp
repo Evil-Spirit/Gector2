@@ -1,5 +1,5 @@
 #include "GkTest.h"
-#include "ObjWriter.h"
+#include "StepWriter.h"
 #include "gk/surface/BSplineSurface.h"
 #include "gk/surface/SurfaceUtils.h"
 #include <cmath>
@@ -175,29 +175,29 @@ GK_TEST(BSplineSurface, DegreeElevateV_PreservesGeometry)
             expectVec3Near(s.evaluate(u,v).p, s2.evaluate(u,v).p, 1e-8);
 }
 
-// ── OBJ visual export ─────────────────────────────────────────────────────────
+// ── STEP visual export ─────────────────────────────────────────────────────
 
-GK_TEST(BSplineSurface, OBJ_BilinearPatch)
+GK_TEST(BSplineSurface, STEP_BilinearPatch)
 {
     auto s = makeBilinear();
     auto mesh = gk::tessellate(s, 8, 8);
-    ObjWriter obj;
-    obj.addSurfaceMesh(mesh);
-    obj.write(objOutputPath("bspline_bilinear_patch_debug.obj"));
+    StepWriter step;
+    step.addSurfaceMesh(mesh);
+    step.write(stepOutputPath("bspline_bilinear_patch_debug.stp"));
     SUCCEED();
 }
 
-GK_TEST(BSplineSurface, OBJ_QuadLinearPatch)
+GK_TEST(BSplineSurface, STEP_QuadLinearPatch)
 {
     auto s = makeQuadLinear();
     auto mesh = gk::tessellate(s, 16, 8);
-    ObjWriter obj;
-    obj.addSurfaceMesh(mesh);
-    obj.write(objOutputPath("bspline_quad_linear_patch_debug.obj"));
+    StepWriter step;
+    step.addSurfaceMesh(mesh);
+    step.write(stepOutputPath("bspline_quad_linear_patch_debug.stp"));
     SUCCEED();
 }
 
-GK_TEST(BSplineSurface, OBJ_BicubicWavePatch)
+GK_TEST(BSplineSurface, STEP_BicubicWavePatch)
 {
     // 4×4 bicubic patch with a wave-like Z profile
     BSplineSurface::CtrlGrid ctrl(4, std::vector<Vec3>(4));
@@ -212,8 +212,8 @@ GK_TEST(BSplineSurface, OBJ_BicubicWavePatch)
     auto kV = BSplineSurface::uniformKnots(4, 3);
     BSplineSurface surf(3, 3, kU, kV, ctrl);
     auto mesh = gk::tessellate(surf, 24, 24);
-    ObjWriter obj;
-    obj.addSurfaceMesh(mesh);
-    obj.write(objOutputPath("bspline_bicubic_wave_debug.obj"));
+    StepWriter step;
+    step.addSurfaceMesh(mesh);
+    step.write(stepOutputPath("bspline_bicubic_wave_debug.stp"));
     SUCCEED();
 }

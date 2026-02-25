@@ -2,7 +2,7 @@
 
 #include "gk/sketch/SketchRegion.h"
 #include "gk/sketch/SketchMesh.h"
-#include "ObjWriter.h"
+#include "StepWriter.h"
 #include <gtest/gtest.h>
 #include <cmath>
 
@@ -10,28 +10,20 @@ using namespace gk;
 
 static void exportMesh(const ExtrusionMesh3D& mesh, const std::string& path)
 {
-    ObjWriter obj;
-    for (auto& v : mesh.vertices) obj.addVertex(v);
-    for (auto& n : mesh.normals)  obj.addNormal(n);
-    int vOff = 1, nOff = 1;
+    StepWriter step;
+    for (auto& v : mesh.vertices) step.addVertex(v);
     for (auto& t : mesh.triangles)
-        obj.addFaceWithNormals(t[0]+vOff, t[0]+nOff,
-                               t[1]+vOff, t[1]+nOff,
-                               t[2]+vOff, t[2]+nOff);
-    obj.write(path);
+        step.addFace(t[0], t[1], t[2]);
+    step.write(path);
 }
 
 static void exportSketchMesh(const SketchMesh3D& mesh, const std::string& path)
 {
-    ObjWriter obj;
-    for (auto& v : mesh.vertices) obj.addVertex(v);
-    for (auto& n : mesh.normals)  obj.addNormal(n);
-    int vOff = 1, nOff = 1;
+    StepWriter step;
+    for (auto& v : mesh.vertices) step.addVertex(v);
     for (auto& t : mesh.triangles)
-        obj.addFaceWithNormals(t[0]+vOff, t[0]+nOff,
-                               t[1]+vOff, t[1]+nOff,
-                               t[2]+vOff, t[2]+nOff);
-    obj.write(path);
+        step.addFace(t[0], t[1], t[2]);
+    step.write(path);
 }
 
 TEST(Extrusion, RectangleExtrude) {
@@ -40,7 +32,7 @@ TEST(Extrusion, RectangleExtrude) {
     EXPECT_FALSE(mesh.vertices.empty());
     EXPECT_FALSE(mesh.triangles.empty());
     EXPECT_GT(mesh.volume, 0.0);
-    exportMesh(mesh, objOutputPath("extrude_rectangle.obj"));
+    exportMesh(mesh, stepOutputPath("extrude_rectangle.stp"));
 }
 
 TEST(Extrusion, TriangleExtrude) {
@@ -48,7 +40,7 @@ TEST(Extrusion, TriangleExtrude) {
     auto mesh = extrudeSketch(region, Vec3{0,0,2});
     EXPECT_FALSE(mesh.vertices.empty());
     EXPECT_FALSE(mesh.triangles.empty());
-    exportMesh(mesh, objOutputPath("extrude_triangle.obj"));
+    exportMesh(mesh, stepOutputPath("extrude_triangle.stp"));
 }
 
 TEST(Extrusion, HexagonExtrude) {
@@ -56,7 +48,7 @@ TEST(Extrusion, HexagonExtrude) {
     auto mesh = extrudeSketch(region, Vec3{0,0,2});
     EXPECT_FALSE(mesh.vertices.empty());
     EXPECT_FALSE(mesh.triangles.empty());
-    exportMesh(mesh, objOutputPath("extrude_hexagon.obj"));
+    exportMesh(mesh, stepOutputPath("extrude_hexagon.stp"));
 }
 
 TEST(Extrusion, RectangleRevolve) {
@@ -68,7 +60,7 @@ TEST(Extrusion, RectangleRevolve) {
                                0.0, 2.0*kPi, 32, 8);
     EXPECT_FALSE(mesh.vertices.empty());
     EXPECT_FALSE(mesh.triangles.empty());
-    exportMesh(mesh, objOutputPath("revolve_rectangle.obj"));
+    exportMesh(mesh, stepOutputPath("revolve_rectangle.stp"));
 }
 
 TEST(Extrusion, TriangleRevolve) {
@@ -78,7 +70,7 @@ TEST(Extrusion, TriangleRevolve) {
                                0.0, 2.0*kPi, 32, 8);
     EXPECT_FALSE(mesh.vertices.empty());
     EXPECT_FALSE(mesh.triangles.empty());
-    exportMesh(mesh, objOutputPath("revolve_triangle.obj"));
+    exportMesh(mesh, stepOutputPath("revolve_triangle.stp"));
 }
 
 TEST(Extrusion, TriangulateSketch) {
@@ -86,7 +78,7 @@ TEST(Extrusion, TriangulateSketch) {
     auto mesh = triangulateSketch(region, Vec3::zero(), Vec3::unitX(), Vec3::unitY(), 8);
     EXPECT_FALSE(mesh.vertices.empty());
     EXPECT_FALSE(mesh.triangles.empty());
-    exportSketchMesh(mesh, objOutputPath("sketch_mesh_rectangle.obj"));
+    exportSketchMesh(mesh, stepOutputPath("sketch_mesh_rectangle.stp"));
 }
 
 TEST(Extrusion, ExtrudeVolumeApprox) {

@@ -2,24 +2,23 @@
 
 #include "gk/sketch/SketchRegion.h"
 #include "gk/sketch/Delaunay2D.h"
-#include "ObjWriter.h"
+#include "StepWriter.h"
 #include "SvgWriter.h"
 #include <gtest/gtest.h>
 #include <cmath>
 
 using namespace gk;
 
-static void exportSketchObj(const std::vector<Vec2>& pts,
-                             const std::vector<DelauTri>& tris,
-                             const std::string& path)
+static void exportSketchStep(const std::vector<Vec2>& pts,
+                              const std::vector<DelauTri>& tris,
+                              const std::string& path)
 {
-    ObjWriter obj;
+    StepWriter step;
     for (auto& p : pts)
-        obj.addVertex(Vec3{p.x, p.y, 0.0});
-    int vOff = 1;
+        step.addVertex(Vec3{p.x, p.y, 0.0});
     for (auto& t : tris)
-        obj.addFace(t.a + vOff, t.b + vOff, t.c + vOff);
-    obj.write(path);
+        step.addFace(t.a, t.b, t.c);
+    step.write(path);
 }
 
 static void exportSketchSvg(const std::vector<Vec2>& outerPts,
@@ -45,7 +44,7 @@ TEST(Sketch, TriangleTriangulate) {
     auto poly = region.discretizeOuter(4);
     auto mesh = delaunayTriangulate(poly);
     EXPECT_GT((int)mesh.triangles.size(), 0);
-    exportSketchObj(mesh.vertices, mesh.triangles, objOutputPath("sketch_triangle.obj"));
+    exportSketchStep(mesh.vertices, mesh.triangles, stepOutputPath("sketch_triangle.stp"));
     exportSketchSvg(poly, svgOutputPath("sketch_triangle.svg"));
 }
 
@@ -54,7 +53,7 @@ TEST(Sketch, RectangleTriangulate) {
     auto poly = region.discretizeOuter(4);
     auto mesh = delaunayTriangulate(poly);
     EXPECT_GT((int)mesh.triangles.size(), 0);
-    exportSketchObj(mesh.vertices, mesh.triangles, objOutputPath("sketch_rectangle.obj"));
+    exportSketchStep(mesh.vertices, mesh.triangles, stepOutputPath("sketch_rectangle.stp"));
     exportSketchSvg(poly, svgOutputPath("sketch_rectangle.svg"));
 }
 
@@ -63,7 +62,7 @@ TEST(Sketch, HexagonTriangulate) {
     auto poly = region.discretizeOuter(4);
     auto mesh = delaunayTriangulate(poly);
     EXPECT_GT((int)mesh.triangles.size(), 0);
-    exportSketchObj(mesh.vertices, mesh.triangles, objOutputPath("sketch_hexagon.obj"));
+    exportSketchStep(mesh.vertices, mesh.triangles, stepOutputPath("sketch_hexagon.stp"));
 }
 
 TEST(Sketch, HexWithHole) {
@@ -74,7 +73,7 @@ TEST(Sketch, HexWithHole) {
     holePoly.push_back(nutRegion.discretizeHole(0, 16));
     auto mesh = delaunayTriangulate(outerPoly, holePoly);
     EXPECT_GT((int)mesh.triangles.size(), 0);
-    exportSketchObj(mesh.vertices, mesh.triangles, objOutputPath("sketch_hex_hole.obj"));
+    exportSketchStep(mesh.vertices, mesh.triangles, stepOutputPath("sketch_hex_hole.stp"));
 }
 
 TEST(Sketch, RoundedRectangle) {
@@ -83,7 +82,7 @@ TEST(Sketch, RoundedRectangle) {
     EXPECT_GT((int)poly.size(), 0);
     auto mesh = delaunayTriangulate(poly);
     EXPECT_GT((int)mesh.triangles.size(), 0);
-    exportSketchObj(mesh.vertices, mesh.triangles, objOutputPath("sketch_rounded_rect.obj"));
+    exportSketchStep(mesh.vertices, mesh.triangles, stepOutputPath("sketch_rounded_rect.stp"));
     exportSketchSvg(poly, svgOutputPath("sketch_rounded_rect.svg"));
 }
 
