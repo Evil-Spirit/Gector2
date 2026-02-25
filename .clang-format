@@ -1,0 +1,23 @@
+---
+Language:        Cpp
+BasedOnStyle:    LLVM
+IndentWidth:     4
+ColumnLimit:     100
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignOperands:   Align
+AlignTrailingComments: true
+BraceWrapping:
+  AfterClass:      true
+  AfterControlStatement: MultiLine
+  AfterFunction:   true
+  AfterNamespace:  true
+  AfterStruct:     true
+BreakBeforeBraces: Custom
+NamespaceIndentation: None
+PointerAlignment: Left
+SortIncludes:    true
+SpaceAfterTemplateKeyword: false
+SpaceBeforeParens: ControlStatements
+Standard:        c++17
+...
