@@ -1,5 +1,6 @@
 # Build directories
 build/
+build_*/
 out/
 CMakeFiles/
 cmake_install.cmake

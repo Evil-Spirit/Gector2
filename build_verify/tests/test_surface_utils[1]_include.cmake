@@ -1,5 +1,0 @@
-if(EXISTS "/home/runner/work/Gector2/Gector2/build_verify/tests/test_surface_utils[1]_tests.cmake")
-  include("/home/runner/work/Gector2/Gector2/build_verify/tests/test_surface_utils[1]_tests.cmake")
-else()
-  add_test(test_surface_utils_NOT_BUILT test_surface_utils_NOT_BUILT)
-endif()

@@ -1,5 +1,0 @@
-if(EXISTS "/home/runner/work/Gector2/Gector2/build_test/tests/test_surface_obj[1]_tests.cmake")
-  include("/home/runner/work/Gector2/Gector2/build_test/tests/test_surface_obj[1]_tests.cmake")
-else()
-  add_test(test_surface_obj_NOT_BUILT test_surface_obj_NOT_BUILT)
-endif()

@@ -1,5 +1,0 @@
-if(EXISTS "/home/runner/work/Gector2/Gector2/build_test/tests/test_quaternion[1]_tests.cmake")
-  include("/home/runner/work/Gector2/Gector2/build_test/tests/test_quaternion[1]_tests.cmake")
-else()
-  add_test(test_quaternion_NOT_BUILT test_quaternion_NOT_BUILT)
-endif()
