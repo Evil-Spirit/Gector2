@@ -35,9 +35,25 @@ target_include_directories(gector_kernel INTERFACE
 )
 target_compile_features(gector_kernel INTERFACE cxx_std_17)
 
-# ── Tests ────────────────────────────────────────────────────────────────────
+# ── Google Test ──────────────────────────────────────────────────────────────
+# Try a pre-installed copy first; if absent download via FetchContent.
 option(GK_BUILD_TESTS "Build tests" ON)
 if(GK_BUILD_TESTS)
+    find_package(GTest QUIET)
+    if(NOT GTest_FOUND)
+        include(FetchContent)
+        FetchContent_Declare(
+            googletest
+            GIT_REPOSITORY https://github.com/google/googletest.git
+            GIT_TAG        v1.14.0
+        )
+        # Avoid overriding the parent project's compiler/linker settings on Windows.
+        set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+        set(BUILD_GMOCK  OFF CACHE BOOL "" FORCE)
+        set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
+        FetchContent_MakeAvailable(googletest)
+    endif()
+
     enable_testing()
     add_subdirectory(tests)
 endif()

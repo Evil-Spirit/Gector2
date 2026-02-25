@@ -89,8 +89,3 @@ GK_TEST(Mat4x4, ToString)
     std::string s = Mat4x4::identity().toString();
     GK_ASSERT_TRUE(s.size() > 0);
 }
-
-int main()
-{
-    return gk::test::runAll();
-}

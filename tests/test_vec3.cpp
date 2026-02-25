@@ -141,8 +141,3 @@ GK_TEST(Vec3, ToString)
     GK_ASSERT_TRUE(s.find("\"y\"") != std::string::npos);
     GK_ASSERT_TRUE(s.find("\"z\"") != std::string::npos);
 }
-
-int main()
-{
-    return gk::test::runAll();
-}

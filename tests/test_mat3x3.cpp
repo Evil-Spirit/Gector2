@@ -104,8 +104,3 @@ GK_TEST(Mat3x3, ToString)
     GK_ASSERT_TRUE(s.size() > 0);
     GK_ASSERT_TRUE(s.front() == '[');
 }
-
-int main()
-{
-    return gk::test::runAll();
-}

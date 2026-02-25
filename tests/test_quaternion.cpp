@@ -114,8 +114,3 @@ GK_TEST(Quaternion, ToString)
     std::string s = Quaternion::identity().toString();
     GK_ASSERT_TRUE(s.find("\"w\"") != std::string::npos);
 }
-
-int main()
-{
-    return gk::test::runAll();
-}

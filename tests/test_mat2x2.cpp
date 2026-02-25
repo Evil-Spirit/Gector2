@@ -107,8 +107,3 @@ GK_TEST(Mat2x2, ToString)
     std::string s = Mat2x2::identity().toString();
     GK_ASSERT_TRUE(s.size() > 0);
 }
-
-int main()
-{
-    return gk::test::runAll();
-}

@@ -167,8 +167,3 @@ GK_TEST(Interval, ToString)
     GK_ASSERT_TRUE(s.find("\"lo\"") != std::string::npos);
     GK_ASSERT_TRUE(s.find("\"hi\"") != std::string::npos);
 }
-
-int main()
-{
-    return gk::test::runAll();
-}

@@ -1,10 +1,12 @@
+include(GoogleTest)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-# Helper macro to add a test executable that links to gector_kernel
+# Helper macro: build a test executable, link gector_kernel + GTest, register
+# every TEST() case with CTest so VS Test Explorer discovers them individually.
 macro(gk_add_test name source)
     add_executable(${name} ${source})
-    target_link_libraries(${name} PRIVATE gector_kernel)
-    add_test(NAME ${name} COMMAND ${name})
+    target_link_libraries(${name} PRIVATE gector_kernel GTest::gtest_main)
+    gtest_discover_tests(${name})
 endmacro()
 
 gk_add_test(test_smoke     test_smoke.cpp)
