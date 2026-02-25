@@ -38,3 +38,9 @@ gk_add_test(test_curve_iface       test_curve_iface.cpp)
 gk_add_test(test_curve_analytic    test_curve_analytic.cpp)
 gk_add_test(test_curve_bspline     test_curve_bspline.cpp)
 gk_add_test(test_curve_utils       test_curve_utils.cpp)
+
+# Chapter 4: Topological Data Model
+gk_add_test(test_brep_topology   test_brep_topology.cpp)
+gk_add_test(test_brep_validator  test_brep_validator.cpp)
+gk_add_test(test_brep_query      test_brep_query.cpp)
+gk_add_test(test_brep_io         test_brep_io.cpp)

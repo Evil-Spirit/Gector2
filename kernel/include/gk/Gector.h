@@ -29,3 +29,6 @@
 
 // ── Chapter 2: Parametric Curves ─────────────────────────────────────────────
 #include "gk/curve/Curves.h"
+
+// ── Chapter 4: Topological Data Model ────────────────────────────────────────
+#include "gk/brep/BRep.h"
