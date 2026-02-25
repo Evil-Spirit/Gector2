@@ -4,6 +4,14 @@
 //   GK_TEST(SuiteName, TestName) { GK_ASSERT(expr); GK_ASSERT_EQ(a, b); ... }
 //   int main() { return gk::test::runAll(); }
 
+// MSVC: 'do { } while(false)' in macros triggers C4127 (conditional expression
+// is constant).  Disable it for this header and all translation units that
+// include it — this is safe because the header is only ever included by test
+// source files.
+#ifdef _MSC_VER
+#pragma warning(disable : 4127)
+#endif
+
 #include <cmath>
 #include <functional>
 #include <iostream>
