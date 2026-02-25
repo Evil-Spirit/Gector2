@@ -32,3 +32,6 @@
 
 // ── Chapter 4: Topological Data Model ────────────────────────────────────────
 #include "gk/brep/BRep.h"
+
+// ── Chapter 5: Primitive Solid Builders + Sketch ─────────────────────────────
+#include "gk/builders/Builders.h"

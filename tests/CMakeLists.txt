@@ -44,3 +44,9 @@ gk_add_test(test_brep_topology   test_brep_topology.cpp)
 gk_add_test(test_brep_validator  test_brep_validator.cpp)
 gk_add_test(test_brep_query      test_brep_query.cpp)
 gk_add_test(test_brep_io         test_brep_io.cpp)
+
+# Chapter 5: Primitive Solid Builders + Sketch
+gk_add_test(test_builders_5_1   test_builders_5_1.cpp)
+gk_add_test(test_builders_5_2   test_builders_5_2.cpp)
+gk_add_test(test_sketch         test_sketch.cpp)
+gk_add_test(test_extrusion      test_extrusion.cpp)
