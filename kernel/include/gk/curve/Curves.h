@@ -1,0 +1,9 @@
+#pragma once
+#include "gk/curve/ICurve.h"
+#include "gk/curve/Line.h"
+#include "gk/curve/Circle.h"
+#include "gk/curve/Ellipse.h"
+#include "gk/curve/Conic.h"
+#include "gk/curve/BSplineCurve.h"
+#include "gk/curve/NURBSCurve.h"
+#include "gk/curve/CurveUtils.h"

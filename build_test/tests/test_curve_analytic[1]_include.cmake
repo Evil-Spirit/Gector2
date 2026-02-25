@@ -1,0 +1,5 @@
+if(EXISTS "/home/runner/work/Gector2/Gector2/build_test/tests/test_curve_analytic[1]_tests.cmake")
+  include("/home/runner/work/Gector2/Gector2/build_test/tests/test_curve_analytic[1]_tests.cmake")
+else()
+  add_test(test_curve_analytic_NOT_BUILT test_curve_analytic_NOT_BUILT)
+endif()

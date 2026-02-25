@@ -26,3 +26,6 @@
 
 // ── Chapter 3: Parametric Surfaces ───────────────────────────────────────────
 #include "gk/surface/Surfaces.h"
+
+// ── Chapter 2: Parametric Curves ─────────────────────────────────────────────
+#include "gk/curve/Curves.h"
