@@ -57,6 +57,10 @@ gk_add_test(test_step_models    test_step_models.cpp)
 
 # Chapter 6: Boolean / Intersection Engine
 gk_add_test(test_intersection_6_1  test_intersection_6_1.cpp)
+gk_add_test(test_boolean_6_2       test_boolean_6_2.cpp)
+gk_add_test(test_boolean_6_3       test_boolean_6_3.cpp)
+gk_add_test(test_boolean_6_4       test_boolean_6_4.cpp)
+gk_add_test(test_boolean_6_5       test_boolean_6_5.cpp)
 
 # Chapter 9.2: STEP Import + round-trip tests
 add_executable(test_step_reader test_step_reader.cpp)
