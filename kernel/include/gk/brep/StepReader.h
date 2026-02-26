@@ -20,6 +20,7 @@
 #include "gk/brep/CoEdge.h"
 #include "gk/curve/BSplineCurve.h"
 #include "gk/curve/Circle.h"
+#include "gk/curve/Ellipse.h"
 #include "gk/curve/Line.h"
 #include "gk/curve/NURBSCurve.h"
 #include "gk/surface/BSplineSurface.h"
@@ -487,6 +488,8 @@ private:
             result = resolveLine(*rec);
         } else if (rec->type == "CIRCLE") {
             result = resolveCircle(*rec);
+        } else if (rec->type == "ELLIPSE") {
+            result = resolveEllipse(*rec);
         } else if (rec->type == "B_SPLINE_CURVE_WITH_KNOTS") {
             result = resolveBSplineCurve(*rec);
         } else if (rec->type == "QUASI_UNIFORM_CURVE") {
@@ -592,6 +595,20 @@ private:
         // Our Circle3: center, radius, xAxis, yAxis (yAxis = normal x xAxis)
         Vec3 yAxis = ax.zDir.cross(ax.xDir).normalized();
         return std::make_shared<Circle3>(ax.origin, radius, ax.xDir, yAxis);
+    }
+
+    std::shared_ptr<ICurve3> resolveEllipse(const Entity& rec)
+    {
+        // ELLIPSE('', axis2, semi_axis_1, semi_axis_2)
+        // axis2: z-axis = normal, x-axis = major axis direction
+        // semi_axis_1 along x-axis, semi_axis_2 along y-axis (y = z × x)
+        auto a = splitArgs(rec.body);
+        if (a.size() < 4) return nullptr;
+        Axis2  ax = resolveAxis2(parseRef(a[1]));
+        double sa1 = parseReal(a[2]);
+        double sa2 = parseReal(a[3]);
+        Vec3 yAxis = ax.zDir.cross(ax.xDir).normalized();
+        return std::make_shared<Ellipse3>(ax.origin, sa1, sa2, ax.xDir, yAxis);
     }
 
     std::shared_ptr<ICurve3> resolveBSplineCurve(const Entity& rec)
@@ -878,7 +895,17 @@ private:
         if (it != wireCache_.end()) return it->second;
 
         const Entity* rec = getEntity(id);
-        if (!rec || rec->type != "EDGE_LOOP") return {};
+        if (!rec) return {};
+
+        // VERTEX_LOOP('', vertex): degenerate loop for full sphere/torus face.
+        // Return an empty (no-edge) wire so the writer can synthesise a boundary.
+        if (rec->type == "VERTEX_LOOP") {
+            auto wire = makeHandle<Wire>();
+            wireCache_[id] = wire;
+            return wire;
+        }
+
+        if (rec->type != "EDGE_LOOP") return {};
 
         // EDGE_LOOP('', (oriented_edge_refs))
         auto a = splitArgs(rec->body);
@@ -932,8 +959,17 @@ private:
 
         // Bounds: first FACE_OUTER_BOUND → outer wire;
         // fall back to first FACE_BOUND if no FACE_OUTER_BOUND is present.
+        // The orientation flag (.T./.F.) on each FACE_BOUND/FACE_OUTER_BOUND is
+        // preserved and used when writing back to STEP.
         bool outerSet = false;
         auto boundRefs = parseRefList(a[1]);
+
+        auto parseBoundOri = [&](const Entity* bnd) -> bool {
+            auto ba = splitArgs(bnd->body);
+            if (ba.size() >= 3)
+                return (trim(ba[2]) == ".T." || trim(ba[2]) == ".TRUE.");
+            return true;
+        };
 
         // Priority pass 1: look for FACE_OUTER_BOUND
         for (int bndRef : boundRefs) {
@@ -943,8 +979,9 @@ private:
             if (ba.size() < 2) continue;
             Handle<Wire> wire = resolveWire(parseRef(ba[1]));
             if (!wire) continue;
-            if (!outerSet) { face->setOuterWire(wire); outerSet = true; }
-            else           { face->addInnerWire(wire); }
+            bool ori = parseBoundOri(bnd);
+            if (!outerSet) { face->setOuterWire(wire, ori); outerSet = true; }
+            else           { face->addInnerWire(wire, ori); }
         }
         // Pass 2: FACE_BOUND entries
         if (!outerSet && boundRefs.size() > 1) {
@@ -970,8 +1007,9 @@ private:
                 if (ba.size() < 2) continue;
                 Handle<Wire> wire = resolveWire(parseRef(ba[1]));
                 if (!wire) continue;
-                if (bndRef == bestRef) { face->setOuterWire(wire); outerSet = true; }
-                else                  { face->addInnerWire(wire); }
+                bool ori = parseBoundOri(bnd);
+                if (bndRef == bestRef) { face->setOuterWire(wire, ori); outerSet = true; }
+                else                  { face->addInnerWire(wire, ori); }
             }
         } else {
             for (int bndRef : boundRefs) {
@@ -981,8 +1019,9 @@ private:
                 if (ba.size() < 2) continue;
                 Handle<Wire> wire = resolveWire(parseRef(ba[1]));
                 if (!wire) continue;
-                if (!outerSet) { face->setOuterWire(wire); outerSet = true; }
-                else           { face->addInnerWire(wire); }
+                bool ori = parseBoundOri(bnd);
+                if (!outerSet) { face->setOuterWire(wire, ori); outerSet = true; }
+                else           { face->addInnerWire(wire, ori); }
             }
         }
 

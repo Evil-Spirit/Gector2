@@ -25,6 +25,7 @@
 #include "gk/surface/Torus.h"
 #include "gk/curve/BSplineCurve.h"
 #include "gk/curve/Circle.h"
+#include "gk/curve/Ellipse.h"
 #include "gk/curve/Line.h"
 #include "gk/curve/NURBSCurve.h"
 
@@ -356,6 +357,8 @@ private:
             return writeLine(*l);
         if (auto* c = dynamic_cast<const Circle3*>(&curve))
             return writeCircle(*c);
+        if (auto* e = dynamic_cast<const Ellipse3*>(&curve))
+            return writeEllipse(*e);
         // Check NURBS before BSpline
         if (auto* n = dynamic_cast<const NURBSCurve3*>(&curve))
             return writeNURBSCurve(*n);
@@ -394,6 +397,33 @@ private:
         Vec3 normal = xAxis.cross(yAxis).normalized();
         int axId = writeAxis2(center, normal, xAxis);
         return emit("CIRCLE(''," + ref(axId) + "," + fmtReal(radius) + ")");
+    }
+
+    int writeEllipse(const Ellipse3& e)
+    {
+        // Reconstruct geometry from evaluation at t=0:
+        //   P(t)  = center + a*cos(t)*xAxis + b*sin(t)*yAxis
+        //   d1(0) = b*yAxis  →  b = |d1(0)|
+        //   d2(0) = -a*xAxis →  a = |d2(0)|
+        auto cp0 = e.evaluate(0.0);
+        double b_val = cp0.d1.norm();
+        double a_val = cp0.d2.norm();
+        if (a_val < 1e-14) a_val = 1.0;
+        if (b_val < 1e-14) b_val = 1.0;
+        Vec3 yAxis  = cp0.d1 * (1.0 / b_val);
+        Vec3 xAxis  = cp0.d2 * (-1.0 / a_val);
+        Vec3 center = cp0.p - xAxis * a_val;
+        Vec3 normal = xAxis.cross(yAxis).normalized();
+        int axId = writeAxis2(center, normal, xAxis);
+        // ELLIPSE('', axis2, semi_axis_1, semi_axis_2) — semi_axis_1 >= semi_axis_2
+        if (a_val >= b_val)
+            return emit("ELLIPSE(''," + ref(axId) + "," +
+                        fmtReal(a_val) + "," + fmtReal(b_val) + ")");
+        // Swap: use yAxis as the major axis direction so semi_axis_1 >= semi_axis_2
+        Vec3 swappedNormal = yAxis.cross(xAxis).normalized();
+        int swappedAxisId  = writeAxis2(center, swappedNormal, yAxis);
+        return emit("ELLIPSE(''," + ref(swappedAxisId) + "," +
+                    fmtReal(b_val) + "," + fmtReal(a_val) + ")");
     }
 
     int writeBSplineCurve(const BSplineCurve3& bc)
@@ -828,11 +858,13 @@ private:
         bool outerHasEdges = face.outerWire() &&
                              !face.outerWire()->coEdges().empty();
 
+        std::string outerOriStr = face.outerWireOrientation() ? ".T." : ".F.";
+
         if (outerHasEdges) {
             // Use the existing topological wire
             int loopId = writeEdgeLoop(*face.outerWire());
             boundIds.push_back(
-                emit("FACE_OUTER_BOUND(''," + ref(loopId) + ",.T.)"));
+                emit("FACE_OUTER_BOUND(''," + ref(loopId) + "," + outerOriStr + ")"));
         } else {
             // No edge topology: synthesize a boundary from the surface geometry
             int loopId = synthEdgeLoop(face);
@@ -842,11 +874,16 @@ private:
             }
         }
 
-        for (auto& iw : face.innerWires()) {
+        const auto& innerOris = face.innerWireOrientations();
+        const auto& innerWires = face.innerWires();
+        for (std::size_t i = 0; i < innerWires.size(); ++i) {
+            const auto& iw = innerWires[i];
             if (!iw || iw->coEdges().empty()) continue;
             int loopId = writeEdgeLoop(*iw);
+            bool ori = (i < innerOris.size()) ? innerOris[i] : false;
+            std::string oriStr = ori ? ".T." : ".F.";
             boundIds.push_back(
-                emit("FACE_BOUND(''," + ref(loopId) + ",.F.)"));
+                emit("FACE_BOUND(''," + ref(loopId) + "," + oriStr + ")"));
         }
 
         std::string senseStr =
