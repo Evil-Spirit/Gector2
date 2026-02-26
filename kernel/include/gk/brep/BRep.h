@@ -13,3 +13,4 @@
 #include "gk/brep/BRepValidator.h"
 #include "gk/brep/BRepQuery.h"
 #include "gk/brep/BRepIO.h"
+#include "gk/brep/StepWriter.h"

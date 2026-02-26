@@ -1,0 +1,5 @@
+if(EXISTS "/home/runner/work/Gector2/Gector2/_codeql_build_dir/tests/test_extrusion[1]_tests.cmake")
+  include("/home/runner/work/Gector2/Gector2/_codeql_build_dir/tests/test_extrusion[1]_tests.cmake")
+else()
+  add_test(test_extrusion_NOT_BUILT test_extrusion_NOT_BUILT)
+endif()
