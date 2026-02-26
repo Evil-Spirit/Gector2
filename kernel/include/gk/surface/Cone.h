@@ -36,9 +36,28 @@ public:
         , vMax_(vMax)
     {
         buildFrame(axis_, uRef_, vRef_);
-        tanA_ = std::tan(halfAngle_);
-        cosA_ = std::cos(halfAngle_);
-        sinA_ = std::sin(halfAngle_);
+        initTrig();
+    }
+
+    /// Constructor that accepts an explicit x-reference direction (uRef).
+    Cone(Vec3 apex, Vec3 axis, double halfAngle,
+         Vec3 xRef,
+         double vMin = 0.0, double vMax = 1.0) noexcept
+        : apex_(apex)
+        , axis_(axis.normalized())
+        , halfAngle_(halfAngle)
+        , vMin_(vMin)
+        , vMax_(vMax)
+    {
+        buildFrame(axis_, uRef_, vRef_);
+        if (xRef.squaredNorm() > 1e-20) {
+            Vec3 x = xRef - axis_ * axis_.dot(xRef);
+            if (x.squaredNorm() > 1e-20) {
+                uRef_ = x.normalized();
+                vRef_ = axis_.cross(uRef_);
+            }
+        }
+        initTrig();
     }
 
     // ── ISurface ─────────────────────────────────────────────────────────────
@@ -95,6 +114,7 @@ public:
     // ── Accessors ─────────────────────────────────────────────────────────────
     const Vec3& apex()       const noexcept { return apex_;      }
     const Vec3& axis()       const noexcept { return axis_;      }
+    const Vec3& uRef()       const noexcept { return uRef_;      }
     double       halfAngle() const noexcept { return halfAngle_; }
 
 private:
@@ -108,6 +128,13 @@ private:
                    ? Vec3::unitX() : Vec3::unitY();
         u = (ref - axis * ref.dot(axis)).normalized();
         v = axis.cross(u);
+    }
+
+    void initTrig() noexcept
+    {
+        tanA_ = std::tan(halfAngle_);
+        cosA_ = std::cos(halfAngle_);
+        sinA_ = std::sin(halfAngle_);
     }
 };
 

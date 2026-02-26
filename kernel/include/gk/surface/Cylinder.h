@@ -38,6 +38,27 @@ public:
         buildFrame(axis_, uRef_, vRef_);
     }
 
+    /// Constructor that accepts an explicit x-reference direction (uRef).
+    /// When xRef is non-zero and perpendicular to axis, it is used directly.
+    Cylinder(Vec3 origin, Vec3 axis, double radius,
+             Vec3 xRef,
+             double vMin = 0.0, double vMax = 1.0) noexcept
+        : origin_(origin)
+        , axis_(axis.normalized())
+        , radius_(radius)
+        , vMin_(vMin)
+        , vMax_(vMax)
+    {
+        buildFrame(axis_, uRef_, vRef_);
+        if (xRef.squaredNorm() > 1e-20) {
+            Vec3 x = xRef - axis_ * axis_.dot(xRef);
+            if (x.squaredNorm() > 1e-20) {
+                uRef_ = x.normalized();
+                vRef_ = axis_.cross(uRef_);
+            }
+        }
+    }
+
     // ── ISurface ─────────────────────────────────────────────────────────────
     SurfacePoint evaluate(double u, double v) const override
     {
@@ -89,6 +110,7 @@ public:
     // ── Accessors ─────────────────────────────────────────────────────────────
     const Vec3& origin() const noexcept { return origin_; }
     const Vec3& axis()   const noexcept { return axis_;   }
+    const Vec3& uRef()   const noexcept { return uRef_;   }
     double       radius() const noexcept { return radius_; }
 
 private:

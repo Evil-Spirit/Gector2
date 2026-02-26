@@ -36,6 +36,24 @@ public:
         buildFrame(axis_, uRef_, vRef_);
     }
 
+    /// Constructor with explicit x-reference direction.
+    Torus(Vec3 center, Vec3 axis, double majorRadius, double minorRadius,
+          Vec3 xRef) noexcept
+        : center_(center)
+        , axis_(axis.normalized())
+        , R_(majorRadius)
+        , r_(minorRadius)
+    {
+        buildFrame(axis_, uRef_, vRef_);
+        if (xRef.squaredNorm() > 1e-20) {
+            Vec3 x = xRef - axis_ * axis_.dot(xRef);
+            if (x.squaredNorm() > 1e-20) {
+                uRef_ = x.normalized();
+                vRef_ = axis_.cross(uRef_);
+            }
+        }
+    }
+
     // ── ISurface ─────────────────────────────────────────────────────────────
     SurfacePoint evaluate(double u, double v) const override
     {
@@ -121,6 +139,7 @@ public:
     // ── Accessors ─────────────────────────────────────────────────────────────
     const Vec3& center() const noexcept { return center_; }
     const Vec3& axis()   const noexcept { return axis_;   }
+    const Vec3& uRef()   const noexcept { return uRef_;   }
     double       majorRadius() const noexcept { return R_; }
     double       minorRadius() const noexcept { return r_; }
 

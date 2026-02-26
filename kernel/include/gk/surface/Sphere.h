@@ -24,6 +24,26 @@ public:
         : center_(center), radius_(radius)
     {}
 
+    /// Constructor that stores the original axis direction and x-reference
+    /// direction for round-trip fidelity.
+    Sphere(Vec3 center, double radius, Vec3 axis) noexcept
+        : center_(center), radius_(radius), axis_(axis.normalized())
+    {
+        buildXRef(axis_, xRef_);
+    }
+
+    /// Constructor with explicit axis and x-reference direction.
+    Sphere(Vec3 center, double radius, Vec3 axis, Vec3 xRef) noexcept
+        : center_(center), radius_(radius), axis_(axis.normalized())
+    {
+        buildXRef(axis_, xRef_);
+        // Override with original xRef if valid and perpendicular to axis
+        if (xRef.squaredNorm() > 1e-20) {
+            Vec3 x = xRef - axis_ * axis_.dot(xRef);
+            if (x.squaredNorm() > 1e-20) xRef_ = x.normalized();
+        }
+    }
+
     // ── ISurface ─────────────────────────────────────────────────────────────
     SurfacePoint evaluate(double u, double v) const override
     {
@@ -85,10 +105,21 @@ public:
     // ── Accessors ─────────────────────────────────────────────────────────────
     const Vec3& center() const noexcept { return center_; }
     double       radius() const noexcept { return radius_; }
+    const Vec3& axis()   const noexcept { return axis_;   }
+    const Vec3& uRef()   const noexcept { return xRef_;   }
 
 private:
     Vec3   center_;
     double radius_;
+    Vec3   axis_{0.0, 0.0, 1.0};   // stored for round-trip export fidelity
+    Vec3   xRef_{1.0, 0.0, 0.0};   // u=0 reference direction
+
+    static void buildXRef(const Vec3& axis, Vec3& xRef) noexcept
+    {
+        Vec3 ref = (std::abs(axis.dot(Vec3{1,0,0})) < 0.9)
+                   ? Vec3{1,0,0} : Vec3{0,1,0};
+        xRef = (ref - axis * axis.dot(ref)).normalized();
+    }
 };
 
 } // namespace gk

@@ -230,18 +230,14 @@ private:
 
     int writeCylinder(const Cylinder& cy)
     {
-        Vec3 xRef, dummy;
-        buildFrame(cy.axis(), xRef, dummy);
-        int axId = writeAxis2(cy.origin(), cy.axis(), xRef);
+        int axId = writeAxis2(cy.origin(), cy.axis(), cy.uRef());
         return emit("CYLINDRICAL_SURFACE(''," + ref(axId) + "," +
                     fmtReal(cy.radius()) + ")");
     }
 
     int writeCone(const Cone& cn)
     {
-        Vec3 xRef, dummy;
-        buildFrame(cn.axis(), xRef, dummy);
-        int axId = writeAxis2(cn.apex(), cn.axis(), xRef);
+        int axId = writeAxis2(cn.apex(), cn.axis(), cn.uRef());
         // CONICAL_SURFACE: (name, placement, radius_at_apex, semi_angle)
         return emit("CONICAL_SURFACE(''," + ref(axId) + "," +
                     fmtReal(0.0) + "," + fmtReal(cn.halfAngle()) + ")");
@@ -249,18 +245,14 @@ private:
 
     int writeSphere(const Sphere& sp)
     {
-        Vec3 xRef, dummy;
-        buildFrame(Vec3::unitZ(), xRef, dummy);
-        int axId = writeAxis2(sp.center(), Vec3::unitZ(), xRef);
+        int axId = writeAxis2(sp.center(), sp.axis(), sp.uRef());
         return emit("SPHERICAL_SURFACE(''," + ref(axId) + "," +
                     fmtReal(sp.radius()) + ")");
     }
 
     int writeTorus(const Torus& t)
     {
-        Vec3 xRef, dummy;
-        buildFrame(t.axis(), xRef, dummy);
-        int axId = writeAxis2(t.center(), t.axis(), xRef);
+        int axId = writeAxis2(t.center(), t.axis(), t.uRef());
         return emit("TOROIDAL_SURFACE(''," + ref(axId) + "," +
                     fmtReal(t.majorRadius()) + "," +
                     fmtReal(t.minorRadius()) + ")");
@@ -854,7 +846,7 @@ private:
             if (!iw || iw->coEdges().empty()) continue;
             int loopId = writeEdgeLoop(*iw);
             boundIds.push_back(
-                emit("FACE_BOUND(''," + ref(loopId) + ",.T.)"));
+                emit("FACE_BOUND(''," + ref(loopId) + ",.F.)"));
         }
 
         std::string senseStr =

@@ -512,7 +512,7 @@ private:
         std::vector<Vec3> ctrlPts;
         std::vector<int>  mults;
         std::vector<double> knots, weights;
-        bool hasKnots = false, hasRational = false;
+        bool hasKnots = false, hasRational = false, isQuasiUniform = false;
 
         for (const auto& part : rec.parts) {
             if (part.type == "B_SPLINE_CURVE") {
@@ -532,11 +532,24 @@ private:
             } else if (part.type == "RATIONAL_B_SPLINE_CURVE") {
                 auto a = splitArgs(part.body);
                 if (!a.empty()) { weights = parseRealList(a[0]); hasRational = true; }
+            } else if (part.type == "QUASI_UNIFORM_CURVE") {
+                // Mixin with no explicit knots → generate quasi-uniform knot vector
+                isQuasiUniform = true;
             }
         }
 
-        if (ctrlPts.empty() || !hasKnots) return nullptr;
-        auto flat = expandKnots(mults, knots);
+        if (ctrlPts.empty()) return nullptr;
+
+        // Build knot vector: explicit knots take priority; fall back to quasi-uniform
+        std::vector<double> flat;
+        if (hasKnots) {
+            flat = expandKnots(mults, knots);
+        } else if (isQuasiUniform) {
+            flat = BSplineCurve3::uniformKnots((int)ctrlPts.size(), degree);
+        } else {
+            return nullptr;
+        }
+
         if (hasRational && !weights.empty()) {
             try { return std::make_shared<NURBSCurve3>(degree, flat, ctrlPts, weights); }
             catch (...) {}
@@ -679,7 +692,7 @@ private:
         if (a.size() < 3) return nullptr;
         Axis2  ax = resolveAxis2(parseRef(a[1]));
         double r  = parseReal(a[2]);
-        return std::make_shared<Cylinder>(ax.origin, ax.zDir, r);
+        return std::make_shared<Cylinder>(ax.origin, ax.zDir, r, ax.xDir);
     }
 
     std::shared_ptr<ISurface> resolveCone(const Entity& rec)
@@ -699,7 +712,7 @@ private:
             if (std::abs(tanA) > 1e-10)
                 apex = ax.origin - ax.zDir * (r / tanA);
         }
-        return std::make_shared<Cone>(apex, ax.zDir, sa);
+        return std::make_shared<Cone>(apex, ax.zDir, sa, ax.xDir);
     }
 
     std::shared_ptr<ISurface> resolveSphere(const Entity& rec)
@@ -709,7 +722,7 @@ private:
         if (a.size() < 3) return nullptr;
         Axis2  ax = resolveAxis2(parseRef(a[1]));
         double r  = parseReal(a[2]);
-        return std::make_shared<Sphere>(ax.origin, r);
+        return std::make_shared<Sphere>(ax.origin, r, ax.zDir, ax.xDir);
     }
 
     std::shared_ptr<ISurface> resolveTorus(const Entity& rec)
@@ -720,7 +733,7 @@ private:
         Axis2  ax = resolveAxis2(parseRef(a[1]));
         double R  = parseReal(a[2]);
         double r  = parseReal(a[3]);
-        return std::make_shared<Torus>(ax.origin, ax.zDir, R, r);
+        return std::make_shared<Torus>(ax.origin, ax.zDir, R, r, ax.xDir);
     }
 
     std::shared_ptr<ISurface> resolveBSplineSurface(const Entity& rec)
@@ -933,16 +946,44 @@ private:
             if (!outerSet) { face->setOuterWire(wire); outerSet = true; }
             else           { face->addInnerWire(wire); }
         }
-        // Pass 2: FACE_BOUND entries (inner holes, or outer if nothing else set)
-        for (int bndRef : boundRefs) {
-            const Entity* bnd = getEntity(bndRef);
-            if (!bnd || bnd->type != "FACE_BOUND") continue;
-            auto ba = splitArgs(bnd->body);
-            if (ba.size() < 2) continue;
-            Handle<Wire> wire = resolveWire(parseRef(ba[1]));
-            if (!wire) continue;
-            if (!outerSet) { face->setOuterWire(wire); outerSet = true; }
-            else           { face->addInnerWire(wire); }
+        // Pass 2: FACE_BOUND entries
+        if (!outerSet && boundRefs.size() > 1) {
+            // AP203 files have only FACE_BOUND.  When multiple bounds are
+            // present, find the one with the most coedges – that is the outer
+            // boundary; the others are inner holes (e.g. circular cutouts).
+            int bestRef  = -1;
+            int bestCount = -1;
+            for (int bndRef : boundRefs) {
+                const Entity* bnd = getEntity(bndRef);
+                if (!bnd || bnd->type != "FACE_BOUND") continue;
+                auto ba = splitArgs(bnd->body);
+                if (ba.size() < 2) continue;
+                Handle<Wire> wire = resolveWire(parseRef(ba[1]));
+                if (!wire) continue;
+                int cnt = (int)wire->coEdges().size();
+                if (cnt > bestCount) { bestCount = cnt; bestRef = bndRef; }
+            }
+            for (int bndRef : boundRefs) {
+                const Entity* bnd = getEntity(bndRef);
+                if (!bnd || bnd->type != "FACE_BOUND") continue;
+                auto ba = splitArgs(bnd->body);
+                if (ba.size() < 2) continue;
+                Handle<Wire> wire = resolveWire(parseRef(ba[1]));
+                if (!wire) continue;
+                if (bndRef == bestRef) { face->setOuterWire(wire); outerSet = true; }
+                else                  { face->addInnerWire(wire); }
+            }
+        } else {
+            for (int bndRef : boundRefs) {
+                const Entity* bnd = getEntity(bndRef);
+                if (!bnd || bnd->type != "FACE_BOUND") continue;
+                auto ba = splitArgs(bnd->body);
+                if (ba.size() < 2) continue;
+                Handle<Wire> wire = resolveWire(parseRef(ba[1]));
+                if (!wire) continue;
+                if (!outerSet) { face->setOuterWire(wire); outerSet = true; }
+                else           { face->addInnerWire(wire); }
+            }
         }
 
         faceCache_[id] = face;
