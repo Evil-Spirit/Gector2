@@ -1,0 +1,5 @@
+add_test([=[BRepIOTest.TextFormatNotEmpty]=]  /home/runner/work/Gector2/Gector2/_codeql_build_dir/tests/test_brep_io [==[--gtest_filter=BRepIOTest.TextFormatNotEmpty]==] --gtest_also_run_disabled_tests)
+set_tests_properties([=[BRepIOTest.TextFormatNotEmpty]=]  PROPERTIES WORKING_DIRECTORY /home/runner/work/Gector2/Gector2/_codeql_build_dir/tests SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==])
+add_test([=[BRepIOTest.WriteAndRead]=]  /home/runner/work/Gector2/Gector2/_codeql_build_dir/tests/test_brep_io [==[--gtest_filter=BRepIOTest.WriteAndRead]==] --gtest_also_run_disabled_tests)
+set_tests_properties([=[BRepIOTest.WriteAndRead]=]  PROPERTIES WORKING_DIRECTORY /home/runner/work/Gector2/Gector2/_codeql_build_dir/tests SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==])
+set(  test_brep_io_TESTS BRepIOTest.TextFormatNotEmpty BRepIOTest.WriteAndRead)

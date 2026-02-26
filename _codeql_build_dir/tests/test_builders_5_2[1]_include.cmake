@@ -1,0 +1,5 @@
+if(EXISTS "/home/runner/work/Gector2/Gector2/_codeql_build_dir/tests/test_builders_5_2[1]_tests.cmake")
+  include("/home/runner/work/Gector2/Gector2/_codeql_build_dir/tests/test_builders_5_2[1]_tests.cmake")
+else()
+  add_test(test_builders_5_2_NOT_BUILT test_builders_5_2_NOT_BUILT)
+endif()
