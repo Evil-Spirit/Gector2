@@ -6,7 +6,9 @@
 
 #include "GkTest.h"
 #include "gk/boolean/FaceFaceIntersect.h"
+#include "gk/brep/BRep.h"
 #include "gk/brep/Face.h"
+#include "gk/brep/StepWriter.h"
 #include "gk/curve/Circle.h"
 #include "gk/curve/Line.h"
 #include "gk/surface/Cone.h"
@@ -15,6 +17,8 @@
 #include "gk/surface/Sphere.h"
 #include "gk/surface/Torus.h"
 #include <cmath>
+#include <filesystem>
+#include <fstream>
 #include <memory>
 
 using namespace gk;
@@ -620,4 +624,260 @@ GK_TEST(Intersect6_1, CornerCase_SampledCurve3_Closed)
     };
     SampledCurve3 sc(pts);
     EXPECT_TRUE(sc.isClosed());
+}
+
+// =============================================================================
+// STEP Visualization Tests
+// =============================================================================
+//
+// Each test intersects two faces, then exports:
+//   * faceA.step  — the first input surface (as a single-face Body)
+//   * faceB.step  — the second input surface
+//   * curves.step — the intersection curves (Line3 / Circle3 as-is;
+//                   SampledCurve3 converted to a degree-1 B-spline polyline)
+//
+// Files are written to step_intersection_vis/ and are intended for manual
+// inspection in any STEP viewer (FreeCAD, STEP AP214 viewers, etc.).
+// These tests always SUCCEED(); they are diagnostic, not correctness checks.
+
+namespace {
+
+/// Ensure the output directory exists and return the full path.
+static std::string stepVisPath(const std::string& filename)
+{
+    std::filesystem::create_directories("step_intersection_vis");
+    return "step_intersection_vis/" + filename;
+}
+
+/// Wrap a Face's surface in a minimal single-face open Body for STEP export.
+static Handle<Body> makeBodyForSurface(const Handle<Face>& face)
+{
+    auto f = makeHandle<Face>();
+    if (face->hasSurface()) {
+        f->setSurface(face->surface());
+        f->setUVDomain(face->uvDomain());
+    }
+    f->setOuterWire(makeHandle<Wire>());   // empty wire — no edge topology
+    auto shell = makeHandle<Shell>();
+    shell->setClosed(false);
+    shell->addFace(f);
+    auto lump = makeHandle<Lump>();
+    lump->setOuterShell(shell);
+    auto body = makeHandle<Body>();
+    body->addLump(lump);
+    return body;
+}
+
+/// Convert any ICurve3 to a STEP-writable form.
+/// SampledCurve3 → degree-1 BSplineCurve3 (polyline); others pass through.
+static std::shared_ptr<ICurve3>
+toStepCurve(const std::shared_ptr<ICurve3>& c)
+{
+    if (const auto* sc = dynamic_cast<const SampledCurve3*>(c.get()))
+        return sampledCurveToPolyline(*sc);
+    return c;
+}
+
+/// Build a wireframe Body containing one edge per intersection curve.
+/// Curve points and isolated intersection points are both represented.
+static Handle<Body> makeBodyForCurves(const FaceFaceIntersectResult& res)
+{
+    auto shell = makeHandle<Shell>();
+    shell->setClosed(false);
+
+    // Curves: each curve becomes a single edge on a faceless Wire → Face.
+    for (const auto& icurve : res.curves) {
+        auto stepCurve = toStepCurve(icurve);
+        auto dom    = icurve->domain();
+        auto vStart = makeHandle<Vertex>(icurve->evaluate(dom.lo).p);
+        auto vEnd   = makeHandle<Vertex>(icurve->evaluate(dom.hi).p);
+
+        auto edge = makeHandle<Edge>(vStart, vEnd);
+        edge->setCurve(stepCurve, dom.lo, dom.hi);
+
+        auto wire = makeHandle<Wire>();
+        wire->addCoEdge(makeHandle<CoEdge>(edge, CoEdgeOrientation::kForward));
+
+        auto face = makeHandle<Face>();   // no surface — wireframe only
+        face->setOuterWire(wire);
+        shell->addFace(face);
+    }
+
+    // Isolated tangent points: each becomes a degenerate (point) edge.
+    for (const auto& pt : res.points) {
+        auto v = makeHandle<Vertex>(pt);
+        auto edge = makeHandle<Edge>(v, v);
+
+        auto wire = makeHandle<Wire>();
+        wire->addCoEdge(makeHandle<CoEdge>(edge, CoEdgeOrientation::kForward));
+
+        auto face = makeHandle<Face>();
+        face->setOuterWire(wire);
+        shell->addFace(face);
+    }
+
+    auto lump = makeHandle<Lump>();
+    lump->setOuterShell(shell);
+    auto body = makeHandle<Body>();
+    body->addLump(lump);
+    return body;
+}
+
+/// Write body to a STEP file.  Returns true on success.
+static bool writeStepFile(const Handle<Body>& body,
+                          const std::string& path,
+                          const std::string& name)
+{
+    std::ofstream f(path);
+    if (!f.is_open()) return false;
+    f << StepWriter::write(*body, name);
+    return f.good();
+}
+
+/// Run a complete intersection visualization: write faceA, faceB and curves.
+static void exportIntersectionStep(const Handle<Face>& fA,
+                                   const Handle<Face>& fB,
+                                   const std::string& prefix)
+{
+    auto res = IntersectFaceFace(*fA, *fB);
+
+    EXPECT_TRUE(writeStepFile(makeBodyForSurface(fA),
+                              stepVisPath(prefix + "_faceA.step"),
+                              prefix + "_FaceA"))
+        << "Failed to write " << prefix << "_faceA.step";
+    EXPECT_TRUE(writeStepFile(makeBodyForSurface(fB),
+                              stepVisPath(prefix + "_faceB.step"),
+                              prefix + "_FaceB"))
+        << "Failed to write " << prefix << "_faceB.step";
+
+    if (!res.curves.empty() || !res.points.empty()) {
+        EXPECT_TRUE(writeStepFile(makeBodyForCurves(res),
+                                  stepVisPath(prefix + "_curves.step"),
+                                  prefix + "_Curves"))
+            << "Failed to write " << prefix << "_curves.step";
+    }
+}
+
+} // anonymous namespace
+
+// ── Plane ∩ Plane ─────────────────────────────────────────────────────────────
+
+GK_TEST(Intersect6_1_StepVis, PlanePlane)
+{
+    auto fA = makeFaceWith<Plane>(Vec3::zero(), Vec3::unitX(), Vec3::unitY());
+    auto fB = makeFaceWith<Plane>(Vec3::zero(), Vec3::unitX(), Vec3::unitZ());
+    exportIntersectionStep(fA, fB, "planePlane");
+    SUCCEED();
+}
+
+// ── Plane ∩ Sphere ────────────────────────────────────────────────────────────
+
+GK_TEST(Intersect6_1_StepVis, PlaneSphere_Circle)
+{
+    auto fA = makeFaceWith<Plane>(Vec3{0,0,0.5}, Vec3::unitX(), Vec3::unitY());
+    auto fB = makeFaceWith<Sphere>(Vec3::zero(), 1.0);
+    exportIntersectionStep(fA, fB, "planeSphere_circle");
+    SUCCEED();
+}
+
+GK_TEST(Intersect6_1_StepVis, PlaneSphere_Tangent)
+{
+    // Tangent case — produces a point rather than a curve
+    auto fA = makeFaceWith<Plane>(Vec3{0,0,1}, Vec3::unitX(), Vec3::unitY());
+    auto fB = makeFaceWith<Sphere>(Vec3::zero(), 1.0);
+    exportIntersectionStep(fA, fB, "planeSphere_tangent");
+    SUCCEED();
+}
+
+// ── Sphere ∩ Sphere ───────────────────────────────────────────────────────────
+
+GK_TEST(Intersect6_1_StepVis, SphereSphere_Circle)
+{
+    auto fA = makeFaceWith<Sphere>(Vec3::zero(),  1.0);
+    auto fB = makeFaceWith<Sphere>(Vec3{1,0,0},   1.0);
+    exportIntersectionStep(fA, fB, "sphereSphere_circle");
+    SUCCEED();
+}
+
+GK_TEST(Intersect6_1_StepVis, SphereSphere_Tangent)
+{
+    // External tangent at (2,0,0)
+    auto fA = makeFaceWith<Sphere>(Vec3::zero(), 1.0);
+    auto fB = makeFaceWith<Sphere>(Vec3{2,0,0},  1.0);
+    exportIntersectionStep(fA, fB, "sphereSphere_tangent");
+    SUCCEED();
+}
+
+// ── Plane ∩ Cylinder ─────────────────────────────────────────────────────────
+
+GK_TEST(Intersect6_1_StepVis, PlaneCylinder_Perpendicular)
+{
+    auto fA = makeFaceWith<Plane>(Vec3::zero(), Vec3::unitX(), Vec3::unitY());
+    auto fB = makeFaceWith<Cylinder>(Vec3::zero(), Vec3::unitZ(), 1.0, -1.0, 1.0);
+    exportIntersectionStep(fA, fB, "planeCylinder_perp");
+    SUCCEED();
+}
+
+GK_TEST(Intersect6_1_StepVis, PlaneCylinder_Oblique)
+{
+    // Oblique cut → ellipse traced by marching algorithm (polyline export)
+    Vec3 n = Vec3{0, 1, 1}.normalized();
+    Vec3 u = Vec3::unitX();
+    Vec3 v = n.cross(u).normalized();
+    auto fA = makeFaceWith<Plane>(Vec3::zero(), u, v);
+    auto fB = makeFaceWith<Cylinder>(Vec3::zero(), Vec3::unitZ(), 1.0, -2.0, 2.0);
+    exportIntersectionStep(fA, fB, "planeCylinder_oblique");
+    SUCCEED();
+}
+
+// ── Plane ∩ Cone ──────────────────────────────────────────────────────────────
+
+GK_TEST(Intersect6_1_StepVis, PlaneCone_Perpendicular)
+{
+    double halfAngle = kPi / 6.0;
+    auto fA = makeFaceWith<Plane>(Vec3{0,0,1}, Vec3::unitX(), Vec3::unitY());
+    auto fB = makeFaceWith<Cone>(Vec3::zero(), Vec3::unitZ(), halfAngle, 0.01, 2.0);
+    exportIntersectionStep(fA, fB, "planeCone_perp");
+    SUCCEED();
+}
+
+// ── Sphere ∩ Cylinder ─────────────────────────────────────────────────────────
+
+GK_TEST(Intersect6_1_StepVis, SphereCylinder)
+{
+    auto fA = makeFaceWith<Sphere>(Vec3::zero(), 1.0);
+    auto fB = makeFaceWith<Cylinder>(Vec3::zero(), Vec3::unitZ(), 0.5, -2.0, 2.0);
+    exportIntersectionStep(fA, fB, "sphereCylinder");
+    SUCCEED();
+}
+
+// ── Cylinder ∩ Cylinder ───────────────────────────────────────────────────────
+
+GK_TEST(Intersect6_1_StepVis, CylinderCylinder_Orthogonal)
+{
+    auto fA = makeFaceWith<Cylinder>(Vec3::zero(), Vec3::unitZ(), 1.0, -2.0, 2.0);
+    auto fB = makeFaceWith<Cylinder>(Vec3::zero(), Vec3::unitX(), 1.0, -2.0, 2.0);
+    exportIntersectionStep(fA, fB, "cylCyl_orthogonal");
+    SUCCEED();
+}
+
+// ── Plane ∩ Torus ─────────────────────────────────────────────────────────────
+
+GK_TEST(Intersect6_1_StepVis, PlaneTorus)
+{
+    auto fA = makeFaceWith<Plane>(Vec3::zero(), Vec3::unitX(), Vec3::unitY());
+    auto fB = makeFaceWith<Torus>(Vec3::zero(), Vec3::unitZ(), 2.0, 1.0);
+    exportIntersectionStep(fA, fB, "planeTorus");
+    SUCCEED();
+}
+
+// ── Sphere ∩ Cone ─────────────────────────────────────────────────────────────
+
+GK_TEST(Intersect6_1_StepVis, SphereCone)
+{
+    double halfAngle = kPi / 4.0;
+    auto fA = makeFaceWith<Sphere>(Vec3{0,0,1}, 1.5);
+    auto fB = makeFaceWith<Cone>(Vec3::zero(), Vec3::unitZ(), halfAngle, 0.1, 3.0);
+    exportIntersectionStep(fA, fB, "sphereCone");
+    SUCCEED();
 }

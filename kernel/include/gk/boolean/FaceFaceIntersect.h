@@ -19,6 +19,7 @@
 //   - Faces with no surface     → kNone
 
 #include "gk/brep/Face.h"
+#include "gk/curve/BSplineCurve.h"
 #include "gk/curve/Circle.h"
 #include "gk/curve/ICurve.h"
 #include "gk/curve/Line.h"
@@ -685,6 +686,29 @@ inline FaceFaceIntersectResult IntersectFaceFace(
 
     // ── General marching fallback ─────────────────────────────────────────────
     return detail_iff::marchingIntersect(*sA, dA, *sB, dB, tol);
+}
+
+// ── Utility: SampledCurve3 → BSplineCurve3 ────────────────────────────────────
+
+/// Convert a SampledCurve3 to a degree-1 B-spline (polyline) so it can be
+/// written by StepWriter or any other tool that requires an analytic ICurve3.
+///
+/// The resulting BSplineCurve3 uses the sample points as control points and a
+/// clamped-uniform knot vector normalized to [0, 1].
+inline std::shared_ptr<BSplineCurve3>
+sampledCurveToPolyline(const SampledCurve3& sc)
+{
+    std::vector<Vec3> pts = sc.points();
+
+    // Guard: need at least 2 distinct control points for a degree-1 spline.
+    if (pts.size() < 2) {
+        Vec3 p = pts.empty() ? Vec3::zero() : pts[0];
+        pts = {p, p + Vec3{1e-9, 0.0, 0.0}};
+    }
+
+    int n = static_cast<int>(pts.size());
+    auto knots = BSplineCurve3::uniformKnots(n, 1);
+    return std::make_shared<BSplineCurve3>(1, std::move(knots), std::move(pts));
 }
 
 } // namespace gk
