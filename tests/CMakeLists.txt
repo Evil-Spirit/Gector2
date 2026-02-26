@@ -53,3 +53,4 @@ gk_add_test(test_extrusion      test_extrusion.cpp)
 
 # Chapter 9: File Format I/O
 gk_add_test(test_step_writer    test_step_writer.cpp)
+gk_add_test(test_step_models    test_step_models.cpp)
