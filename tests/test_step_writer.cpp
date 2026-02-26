@@ -404,6 +404,64 @@ TEST(StepWriterTest, NURBSSurfaceFace)
 
 // 6. File output ───────────────────────────────────────────────────────────────
 
+// Helper: confirm there are no empty EDGE_LOOP('',()) in the output
+static void assertNoEmptyEdgeLoops(const std::string& step)
+{
+    // An empty EDGE_LOOP looks like: EDGE_LOOP('',())
+    EXPECT_EQ(step.find("EDGE_LOOP('',())"), std::string::npos)
+        << "Found empty EDGE_LOOP('',()) — face boundary is missing";
+}
+
+TEST(StepWriterTest, BoxHasNonEmptyEdgeLoops)
+{
+    auto body = makeBox(Vec3::zero(), Vec3{1, 1, 1});
+    std::string step = StepWriter::write(*body);
+    assertNoEmptyEdgeLoops(step);
+    // A box has 6 faces each with 4 LINE edges
+    EXPECT_TRUE(contains(step, "LINE("));
+    // Verify: 6 ADVANCED_FACE entries
+    std::size_t faceCnt = 0, pos = 0;
+    while ((pos = step.find("ADVANCED_FACE", pos)) != std::string::npos) {
+        ++faceCnt;  pos += 13;
+    }
+    EXPECT_EQ(faceCnt, static_cast<std::size_t>(6));
+}
+
+TEST(StepWriterTest, SphereHasNonEmptyEdgeLoops)
+{
+    auto body = makeSphere(Vec3::zero(), 1.0);
+    std::string step = StepWriter::write(*body);
+    assertNoEmptyEdgeLoops(step);
+    EXPECT_TRUE(contains(step, "CIRCLE("));
+}
+
+TEST(StepWriterTest, CylinderHasNonEmptyEdgeLoops)
+{
+    auto body = makeCylinder(Vec3::zero(), Vec3::unitZ(), 1.0, 2.0);
+    std::string step = StepWriter::write(*body);
+    assertNoEmptyEdgeLoops(step);
+    EXPECT_TRUE(contains(step, "CIRCLE("));
+    EXPECT_TRUE(contains(step, "LINE("));
+}
+
+TEST(StepWriterTest, ConeHasNonEmptyEdgeLoops)
+{
+    constexpr double kPi = 3.14159265358979323846;
+    auto body = makeCone(Vec3::zero(), Vec3::unitZ(), kPi / 6.0, 2.0);
+    std::string step = StepWriter::write(*body);
+    assertNoEmptyEdgeLoops(step);
+    EXPECT_TRUE(contains(step, "CIRCLE("));
+    EXPECT_TRUE(contains(step, "LINE("));
+}
+
+TEST(StepWriterTest, TorusHasNonEmptyEdgeLoops)
+{
+    auto body = makeTorus(Vec3::zero(), Vec3::unitZ(), 2.0, 0.5);
+    std::string step = StepWriter::write(*body);
+    assertNoEmptyEdgeLoops(step);
+    EXPECT_TRUE(contains(step, "CIRCLE("));
+}
+
 TEST(StepWriterTest, WriteToFile_TopoCube)
 {
     auto body = makeTopoCube();
