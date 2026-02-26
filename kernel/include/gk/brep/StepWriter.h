@@ -153,6 +153,13 @@ private:
         v = axis.cross(u);
     }
 
+    /// Convenience overload: compute only the first frame axis.
+    static void buildFrame(const Vec3& axis, Vec3& u) noexcept
+    {
+        Vec3 v;
+        buildFrame(axis, u, v);
+    }
+
     // ── Geometry primitives ───────────────────────────────────────────────────
 
     int writeCartesianPoint(const Vec3& pt)
@@ -449,6 +456,290 @@ private:
                     " REPRESENTATION_ITEM(''))");
     }
 
+    // ── Synthetic edge-loop helpers ───────────────────────────────────────────
+    //
+    // Used when a Face carries surface geometry but no edge topology (empty
+    // Wire).  Each method generates VERTEX_POINT / EDGE_CURVE / ORIENTED_EDGE
+    // entities and returns the id of the resulting EDGE_LOOP.
+
+    /// Emit a standalone VERTEX_POINT (not cached — for synthetic use only).
+    int emitVertexPoint(const Vec3& pt)
+    {
+        int cpId = writeCartesianPoint(pt);
+        return emit("VERTEX_POINT(''," + ref(cpId) + ")");
+    }
+
+    /// Emit a LINE-based EDGE_CURVE between two existing VERTEX_POINT ids.
+    int emitLineEdge(int vStartId, int vEndId,
+                     const Vec3& startPt, const Vec3& endPt)
+    {
+        Vec3   dir = endPt - startPt;
+        double mag = dir.norm();
+        if (mag < 1e-14) { dir = Vec3::unitX(); mag = 1.0; }
+        int pId  = writeCartesianPoint(startPt);
+        int vId  = writeVector(dir, mag);
+        int lineId = emit("LINE(''," + ref(pId) + "," + ref(vId) + ")");
+        return emit("EDGE_CURVE(''," + ref(vStartId) + "," + ref(vEndId) +
+                    "," + ref(lineId) + ",.T.)");
+    }
+
+    /// Emit a CIRCLE-based EDGE_CURVE.
+    /// @p axis     normal to the circle plane (used as AXIS2 Z direction).
+    /// @p xRef     reference direction in the circle plane (at parameter 0).
+    /// @p sameSense  .T. = counterclockwise from vStartId to vEndId.
+    int emitCircleEdge(int vStartId, int vEndId,
+                       const Vec3& center, const Vec3& axis, const Vec3& xRef,
+                       double radius, bool sameSense = true)
+    {
+        int axId   = writeAxis2(center, axis, xRef);
+        int circId = emit("CIRCLE(''," + ref(axId) + "," + fmtReal(radius) + ")");
+        std::string ss = sameSense ? ".T." : ".F.";
+        return emit("EDGE_CURVE(''," + ref(vStartId) + "," + ref(vEndId) +
+                    "," + ref(circId) + "," + ss + ")");
+    }
+
+    /// Emit an ORIENTED_EDGE referencing an EDGE_CURVE id.
+    int emitOrientedEdge(int ecId, bool forward)
+    {
+        std::string ori = forward ? ".T." : ".F.";
+        return emit("ORIENTED_EDGE('',*,*," + ref(ecId) + "," + ori + ")");
+    }
+
+    /// Emit an EDGE_LOOP from a list of ORIENTED_EDGE ids.
+    int emitEdgeLoop(const std::vector<int>& oeIds)
+    {
+        return emit("EDGE_LOOP(''," + refList(oeIds) + ")");
+    }
+
+    // ── Per-surface synthetic boundary generators ─────────────────────────────
+
+    /// Rectangular 4-edge boundary for a Plane face with a finite UV domain.
+    int synthPlaneLoop(const Plane& pl, const SurfaceDomain& dom)
+    {
+        double u0 = dom.u.lo, u1 = dom.u.hi;
+        double v0 = dom.v.lo, v1 = dom.v.hi;
+        // Reject infinite domains (e.g. unbounded planes without UV crop)
+        if (std::abs(u0) > 1e9 || std::abs(u1) > 1e9 ||
+            std::abs(v0) > 1e9 || std::abs(v1) > 1e9)
+            return -1;
+
+        Vec3 P00 = pl.evaluate(u0, v0).p;
+        Vec3 P10 = pl.evaluate(u1, v0).p;
+        Vec3 P11 = pl.evaluate(u1, v1).p;
+        Vec3 P01 = pl.evaluate(u0, v1).p;
+
+        int v00 = emitVertexPoint(P00);
+        int v10 = emitVertexPoint(P10);
+        int v11 = emitVertexPoint(P11);
+        int v01 = emitVertexPoint(P01);
+
+        int e0 = emitLineEdge(v00, v10, P00, P10);
+        int e1 = emitLineEdge(v10, v11, P10, P11);
+        int e2 = emitLineEdge(v11, v01, P11, P01);
+        int e3 = emitLineEdge(v01, v00, P01, P00);
+
+        return emitEdgeLoop({
+            emitOrientedEdge(e0, true),
+            emitOrientedEdge(e1, true),
+            emitOrientedEdge(e2, true),
+            emitOrientedEdge(e3, true)
+        });
+    }
+
+    /// Seam + two-circle boundary for a full Cylinder lateral face.
+    ///
+    /// Topology:  seam_fwd → top_circle_fwd → seam_rev → bot_circle_rev
+    /// (loop goes: V_bot → V_top → V_top → V_bot → V_bot)
+    int synthCylinderLoop(const Cylinder& cy, const SurfaceDomain& dom)
+    {
+        double vMin = dom.v.lo, vMax = dom.v.hi;
+        Vec3 axN = cy.axis().normalized();
+        Vec3 uRef;
+        buildFrame(axN, uRef);
+
+        Vec3 P_bot = cy.origin() + axN * vMin + uRef * cy.radius();
+        Vec3 P_top = cy.origin() + axN * vMax + uRef * cy.radius();
+
+        int vtxBot = emitVertexPoint(P_bot);
+        int vtxTop = emitVertexPoint(P_top);
+
+        // Seam LINE from bottom seam point to top seam point
+        int e_seam = emitLineEdge(vtxBot, vtxTop, P_bot, P_top);
+
+        // Bottom circle (closed: vtxBot → vtxBot)
+        Vec3 botCenter = cy.origin() + axN * vMin;
+        int e_bot = emitCircleEdge(vtxBot, vtxBot, botCenter, axN, uRef, cy.radius());
+
+        // Top circle (closed: vtxTop → vtxTop)
+        Vec3 topCenter = cy.origin() + axN * vMax;
+        int e_top = emitCircleEdge(vtxTop, vtxTop, topCenter, axN, uRef, cy.radius());
+
+        return emitEdgeLoop({
+            emitOrientedEdge(e_seam, true),   // V_bot → V_top
+            emitOrientedEdge(e_top,  true),   // V_top → V_top  (full circle)
+            emitOrientedEdge(e_seam, false),  // V_top → V_bot
+            emitOrientedEdge(e_bot,  false)   // V_bot → V_bot  (full circle, rev)
+        });
+    }
+
+    /// Seam + base-circle boundary for a Cone lateral face.
+    ///
+    /// Topology:  seam_fwd → base_circle_fwd → seam_rev
+    /// (loop goes: V_apex → V_base → V_base → V_apex)
+    int synthConeLoop(const Cone& cn, const SurfaceDomain& dom)
+    {
+        double vMax = dom.v.hi;
+        Vec3 axN = cn.axis().normalized();
+        Vec3 uRef;
+        buildFrame(axN, uRef);
+
+        double baseR = vMax * std::tan(cn.halfAngle());
+        Vec3 P_apex = cn.apex();
+        Vec3 P_base = cn.apex() + axN * vMax + uRef * baseR;
+
+        int vtxApex = emitVertexPoint(P_apex);
+        int vtxBase = emitVertexPoint(P_base);
+
+        // Seam LINE: apex → base seam point
+        int e_seam = emitLineEdge(vtxApex, vtxBase, P_apex, P_base);
+
+        // Base circle (closed: vtxBase → vtxBase)
+        Vec3 baseCenter = cn.apex() + axN * vMax;
+        int e_base = emitCircleEdge(vtxBase, vtxBase, baseCenter, axN, uRef, baseR);
+
+        return emitEdgeLoop({
+            emitOrientedEdge(e_seam, true),   // apex → base seam pt
+            emitOrientedEdge(e_base, true),   // base seam pt → base seam pt
+            emitOrientedEdge(e_seam, false)   // base seam pt → apex
+        });
+    }
+
+    /// Outer circle boundary for a full DiscSurface face (rInner ≈ 0).
+    int synthDiscLoop(const DiscSurface& d, const SurfaceDomain& dom)
+    {
+        double rOuter = dom.v.hi;
+        // Seam point on outer rim at u=0
+        Vec3 seamPt = d.center() + d.uRef() * rOuter;
+        int vtx = emitVertexPoint(seamPt);
+
+        // DiscSurface natural normal is -(uRef × vRef); use that as circle axis
+        Vec3 discAxis = (d.uRef().cross(d.vRef()) * -1.0).normalized();
+        // Outer circle (closed: vtx → vtx)
+        int e_outer = emitCircleEdge(vtx, vtx, d.center(), discAxis, d.uRef(), rOuter);
+
+        return emitEdgeLoop({ emitOrientedEdge(e_outer, true) });
+    }
+
+    /// Seam-meridian boundary for a Sphere face.
+    ///
+    /// Uses a single great-circle arc (the seam at u=0) traversed both ways
+    /// so that the loop encircles the whole sphere surface.
+    ///
+    /// CIRCLE axis = +Y, ref = +X (assuming sphere axis = +Z, uRef = +X):
+    ///   P(t) = center + r*(cos(t)*X + sin(t)*(Y×X))
+    ///        = center + r*(cos(t)*X - sin(t)*Z)
+    ///   P(π/2)  = center - r*Z  (south pole)
+    ///   P(-π/2) = center + r*Z  (north pole)
+    ///   P(0)    = center + r*X  (equator seam point)
+    ///
+    /// With same_sense=.F. on the EDGE_CURVE, traversal goes clockwise
+    /// (decreasing t), so the arc from south (t=π/2) to north (t=-π/2)
+    /// passes through the east equator at t=0 — matching the seam at u=0.
+    int synthSphereLoop(const Sphere& sp, const SurfaceDomain& /*dom*/)
+    {
+        Vec3 southPole = sp.center() + Vec3{0.0, 0.0, -sp.radius()};
+        Vec3 northPole = sp.center() + Vec3{0.0, 0.0,  sp.radius()};
+
+        int vtxSouth = emitVertexPoint(southPole);
+        int vtxNorth = emitVertexPoint(northPole);
+
+        // Seam circle in the XZ plane (axis = +Y, ref = +X), same_sense = .F.
+        // so the short arc (east side) is taken from south pole to north pole.
+        int e_seam = emitCircleEdge(vtxSouth, vtxNorth,
+                                    sp.center(),
+                                    Vec3::unitY(),   // circle axis
+                                    Vec3::unitX(),   // reference direction (t=0)
+                                    sp.radius(),
+                                    false);          // same_sense = .F. → east-side arc
+
+        // Loop: seam forward (south→north via east) + seam reversed (north→south via west)
+        return emitEdgeLoop({
+            emitOrientedEdge(e_seam, true),
+            emitOrientedEdge(e_seam, false)
+        });
+    }
+
+    /// Double-seam boundary for a Torus face.
+    ///
+    /// Two seam circles share a single VERTEX_POINT at P(0,0):
+    ///   major circle  – u varies at v=0, radius = R+r
+    ///   minor circle  – v varies at u=0, radius = r
+    ///
+    /// Loop: major_fwd + minor_fwd + major_rev + minor_rev
+    int synthTorusLoop(const Torus& t, const SurfaceDomain& /*dom*/)
+    {
+        Vec3 uRef;
+        buildFrame(t.axis(), uRef);
+
+        // Single shared vertex at P(0, 0)
+        Vec3 V1pt = t.center() + uRef * (t.majorRadius() + t.minorRadius());
+        int vtx1 = emitVertexPoint(V1pt);
+
+        // Major circle: u varies at v=0
+        //   P(u,0) = center + (R+r)*(cos(u)*uRef + sin(u)*vRef)
+        //   CIRCLE axis = t.axis(), ref = uRef, radius = R+r
+        int e_major = emitCircleEdge(vtx1, vtx1,
+                                     t.center(), t.axis(), uRef,
+                                     t.majorRadius() + t.minorRadius());
+
+        // Minor circle: v varies at u=0
+        //   P(0,v) = center + (R+r*cos(v))*uRef + r*sin(v)*axis
+        //   = tubeCenter + r*(cos(v)*uRef + sin(v)*axis)
+        //   CIRCLE axis = uRef × axis (perpendicular to the meridional plane),
+        //                 ref = uRef, radius = r
+        //
+        // Derivation:  STEP circle P(t) = origin + r*(cos(t)*D + sin(t)*(A×D))
+        //   Set A×D = axis  →  A = uRef × axis (since (uRef×axis)×uRef = axis
+        //   when uRef⊥axis: verify with axis=Z, uRef=X → (X×Z)×X = (-Y)×X = Z ✓)
+        Vec3 tubeCenter  = t.center() + uRef * t.majorRadius();
+        Vec3 minorAxis   = uRef.cross(t.axis()).normalized(); // ≡ −vRef
+        int e_minor = emitCircleEdge(vtx1, vtx1,
+                                     tubeCenter, minorAxis, uRef,
+                                     t.minorRadius());
+
+        return emitEdgeLoop({
+            emitOrientedEdge(e_major, true),
+            emitOrientedEdge(e_minor, true),
+            emitOrientedEdge(e_major, false),
+            emitOrientedEdge(e_minor, false)
+        });
+    }
+
+    /// Dispatch to the appropriate synthetic boundary generator.
+    /// Returns the EDGE_LOOP id, or -1 if no synthetic loop can be generated.
+    int synthEdgeLoop(const Face& face)
+    {
+        if (!face.hasSurface()) return -1;
+
+        SurfaceDomain dom = face.uvDomain();
+        const ISurface* surf = face.surface().get();
+
+        if (auto* pl = dynamic_cast<const Plane*>(surf))
+            return synthPlaneLoop(*pl, dom);
+        if (auto* cy = dynamic_cast<const Cylinder*>(surf))
+            return synthCylinderLoop(*cy, dom);
+        if (auto* co = dynamic_cast<const Cone*>(surf))
+            return synthConeLoop(*co, dom);
+        if (auto* di = dynamic_cast<const DiscSurface*>(surf))
+            return synthDiscLoop(*di, dom);
+        if (auto* sp = dynamic_cast<const Sphere*>(surf))
+            return synthSphereLoop(*sp, dom);
+        if (auto* to = dynamic_cast<const Torus*>(surf))
+            return synthTorusLoop(*to, dom);
+        // BSplineSurface / NURBSSurface: no generic boundary synthesis
+        return -1;
+    }
+
     // ── Topology writers ──────────────────────────────────────────────────────
 
     std::unordered_map<uint64_t, int> vertexStepId_; // Vertex id → VERTEX_POINT
@@ -541,13 +832,26 @@ private:
 
         // Face bounds (outer + inner wires)
         std::vector<int> boundIds;
-        if (face.outerWire()) {
+
+        bool outerHasEdges = face.outerWire() &&
+                             !face.outerWire()->coEdges().empty();
+
+        if (outerHasEdges) {
+            // Use the existing topological wire
             int loopId = writeEdgeLoop(*face.outerWire());
             boundIds.push_back(
                 emit("FACE_OUTER_BOUND(''," + ref(loopId) + ",.T.)"));
+        } else {
+            // No edge topology: synthesize a boundary from the surface geometry
+            int loopId = synthEdgeLoop(face);
+            if (loopId > 0) {
+                boundIds.push_back(
+                    emit("FACE_OUTER_BOUND(''," + ref(loopId) + ",.T.)"));
+            }
         }
+
         for (auto& iw : face.innerWires()) {
-            if (!iw) continue;
+            if (!iw || iw->coEdges().empty()) continue;
             int loopId = writeEdgeLoop(*iw);
             boundIds.push_back(
                 emit("FACE_BOUND(''," + ref(loopId) + ",.T.)"));
