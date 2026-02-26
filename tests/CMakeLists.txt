@@ -54,3 +54,11 @@ gk_add_test(test_extrusion      test_extrusion.cpp)
 # Chapter 9: File Format I/O
 gk_add_test(test_step_writer    test_step_writer.cpp)
 gk_add_test(test_step_models    test_step_models.cpp)
+
+# Chapter 9.2: STEP Import + round-trip tests
+add_executable(test_step_reader test_step_reader.cpp)
+target_link_libraries(test_step_reader PRIVATE gector_kernel GTest::gtest_main)
+# Inject the path to the step_examples directory so tests can find the files.
+target_compile_definitions(test_step_reader PRIVATE
+    STEP_EXAMPLES_DIR="${CMAKE_SOURCE_DIR}/step_examples")
+gtest_discover_tests(test_step_reader)
