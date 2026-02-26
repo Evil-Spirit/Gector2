@@ -17,10 +17,21 @@ public:
 
     // ── Wires ────────────────────────────────────────────────────────────────
     Handle<Wire>       outerWire()  const noexcept { return outerWire_; }
-    void               setOuterWire(Handle<Wire> w) noexcept { outerWire_ = std::move(w); }
+    void               setOuterWire(Handle<Wire> w, bool orientation = true) noexcept
+    {
+        outerWire_ = std::move(w);
+        outerWireOri_ = orientation;
+    }
 
-    void               addInnerWire(Handle<Wire> w) { innerWires_.push_back(std::move(w)); }
+    bool               outerWireOrientation() const noexcept { return outerWireOri_; }
+
+    void               addInnerWire(Handle<Wire> w, bool orientation = false)
+    {
+        innerWires_.push_back(std::move(w));
+        innerWireOris_.push_back(orientation);
+    }
     const std::vector<Handle<Wire>>& innerWires() const noexcept { return innerWires_; }
+    const std::vector<bool>& innerWireOrientations() const noexcept { return innerWireOris_; }
 
     // ── Orientation ──────────────────────────────────────────────────────────
     FaceOrientation orientation()             const noexcept { return orientation_; }
@@ -45,6 +56,8 @@ public:
 private:
     Handle<Wire>              outerWire_;
     std::vector<Handle<Wire>> innerWires_;
+    bool                      outerWireOri_{true};
+    std::vector<bool>         innerWireOris_;
     FaceOrientation           orientation_{FaceOrientation::kForward};
     std::shared_ptr<ISurface> surface_;
     SurfaceDomain             uvDomain_{};
