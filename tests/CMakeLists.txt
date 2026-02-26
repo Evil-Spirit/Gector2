@@ -55,6 +55,9 @@ gk_add_test(test_extrusion      test_extrusion.cpp)
 gk_add_test(test_step_writer    test_step_writer.cpp)
 gk_add_test(test_step_models    test_step_models.cpp)
 
+# Chapter 6: Boolean / Intersection Engine
+gk_add_test(test_intersection_6_1  test_intersection_6_1.cpp)
+
 # Chapter 9.2: STEP Import + round-trip tests
 add_executable(test_step_reader test_step_reader.cpp)
 target_link_libraries(test_step_reader PRIVATE gector_kernel GTest::gtest_main)
