@@ -1,5 +1,0 @@
-if(EXISTS "/home/runner/work/Gector2/Gector2/_codeql_build_dir/tests/test_mat4x4[1]_tests.cmake")
-  include("/home/runner/work/Gector2/Gector2/_codeql_build_dir/tests/test_mat4x4[1]_tests.cmake")
-else()
-  add_test(test_mat4x4_NOT_BUILT test_mat4x4_NOT_BUILT)
-endif()
