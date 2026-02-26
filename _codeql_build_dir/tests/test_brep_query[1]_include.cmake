@@ -1,5 +1,0 @@
-if(EXISTS "/home/runner/work/Gector2/Gector2/_codeql_build_dir/tests/test_brep_query[1]_tests.cmake")
-  include("/home/runner/work/Gector2/Gector2/_codeql_build_dir/tests/test_brep_query[1]_tests.cmake")
-else()
-  add_test(test_brep_query_NOT_BUILT test_brep_query_NOT_BUILT)
-endif()
