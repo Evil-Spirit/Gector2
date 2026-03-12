@@ -50,6 +50,7 @@ gk_add_test(test_builders_5_1   test_builders_5_1.cpp)
 gk_add_test(test_builders_5_2   test_builders_5_2.cpp)
 gk_add_test(test_sketch         test_sketch.cpp)
 gk_add_test(test_extrusion      test_extrusion.cpp)
+gk_add_test(test_builders_5_4   test_builders_5_4.cpp)
 
 # Chapter 9: File Format I/O
 gk_add_test(test_step_writer    test_step_writer.cpp)

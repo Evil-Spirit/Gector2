@@ -309,4 +309,23 @@ inline SimpleMesh3D makePyramidMesh(Vec3 apex, Vec3 baseCenter, Vec3 axisUp,
     return mesh;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// meshVolume
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Compute the volume of a closed triangulated SimpleMesh3D using the
+/// divergence theorem: V = (1/6) |Σ_triangles v0 · (v1 × v2)|.
+/// Requires a consistently-wound, watertight mesh.
+inline double meshVolume(const SimpleMesh3D& mesh)
+{
+    double vol = 0.0;
+    for (auto& t : mesh.triangles) {
+        const Vec3& v0 = mesh.vertices[static_cast<std::size_t>(t[0])];
+        const Vec3& v1 = mesh.vertices[static_cast<std::size_t>(t[1])];
+        const Vec3& v2 = mesh.vertices[static_cast<std::size_t>(t[2])];
+        vol += v0.dot(v1.cross(v2));
+    }
+    return std::abs(vol) / 6.0;
+}
+
 } // namespace gk

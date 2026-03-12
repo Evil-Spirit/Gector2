@@ -95,3 +95,46 @@ TEST(Extrusion, ExtrudeVolumeApprox) {
     auto mesh = extrudeSketch(region, Vec3{0,0,2}, 8, 1);
     EXPECT_NEAR(mesh.volume, 2.0, 0.01);
 }
+
+TEST(Extrusion, TriangleExtrudeVolume) {
+    // Triangle with base=2, height=1.7 → area ≈ 1.7; extrude by 3 → vol ≈ 5.1
+    auto region = makeTriangleRegion(Vec2{0,0}, Vec2{2,0}, Vec2{1, 1.7});
+    auto mesh = extrudeSketch(region, Vec3{0,0,3}, 8, 1);
+    double expectedArea = 0.5 * 2.0 * 1.7;
+    EXPECT_NEAR(mesh.volume, expectedArea * 3.0, 0.05);
+}
+
+TEST(Extrusion, HexagonExtrudeVolume) {
+    // Regular hexagon with circumradius 1: area = 3*sqrt(3)/2 ≈ 2.598
+    constexpr double kPi = 3.14159265358979323846;
+    double r = 1.0;
+    int n = 6;
+    auto region = makeRegularPolygonRegion(Vec2{0,0}, r, n);
+    auto mesh = extrudeSketch(region, Vec3{0,0,2}, 8, 1);
+    double expectedArea = double(n) * r * r * std::sin(2.0 * kPi / double(n)) / 2.0;
+    EXPECT_NEAR(mesh.volume, expectedArea * 2.0, 0.05);
+}
+
+TEST(Extrusion, RevolveVolumeApprox) {
+    // Revolve a 1x1 square at x=2..3, y=0..1 around the Y axis:
+    // centroid x = 2.5, area = 1.0 → volume = 2π * 2.5 * 1.0 (Pappus)
+    constexpr double kPi = 3.14159265358979323846;
+    auto region = makeRectangleRegion(Vec2{2.0, 0.0}, 1.0, 1.0);
+    auto mesh = revolveSketch(region, Vec3::zero(), Vec3::unitY(),
+                               0.0, 2.0 * kPi, 64, 16);
+    double expected = 2.0 * kPi * 2.5 * 1.0;
+    EXPECT_NEAR(mesh.volume, expected, expected * 0.05);
+}
+
+TEST(Extrusion, RevolveLineGeneratesCone) {
+    // Revolution of a line from (0,0) to (r,h) around Y axis approximates a cone:
+    // volume = π * r² * h / 3
+    constexpr double kPi = 3.14159265358979323846;
+    double r = 1.0, h = 2.0;
+    // Triangle: apex at x=0, base at x=r, spanning y=0..h
+    auto region = makeTriangleRegion(Vec2{0, 0}, Vec2{r, 0}, Vec2{0, h});
+    auto mesh = revolveSketch(region, Vec3::zero(), Vec3::unitY(),
+                               0.0, 2.0 * kPi, 64, 16);
+    double expected = kPi * r * r * h / 3.0;
+    EXPECT_NEAR(mesh.volume, expected, expected * 0.05);
+}
